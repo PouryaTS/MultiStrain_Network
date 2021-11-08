@@ -29,9 +29,10 @@ std::uniform_real_distribution<double> unifreal_dis(0.0,1.0);
 void CreateErdosReinyGraph(double p_grph,int NNodes,Vertex Nodes[]);
 void InitializingNodes(int NNodes,int Nseed_1,int Nseed_2, Vertex Nodes[]);
 void Net2StrainSIR(double beta_f, double beta_s, double mu_f, double mu_s, double sigma, int NNodes, Vertex Nodes[]);
-template <size_t rows, size_t cols>
-void Writ2DArr2csv(std::string filename, double (&array)[rows][cols]);
+//template <size_t rows, size_t cols>
+//void Writ2DArr2csv(std::string filename, double (&array)[rows][cols]);
 void Writ2DArr2csv2(std::string filename, double** array,int rows, int cols);
+
 
 int main(){
 
@@ -295,7 +296,7 @@ void Net2StrainSIR(double beta_f, double beta_s, double mu_f, double mu_s, doubl
     }
     
 }
-
+/*
 template <size_t rows, size_t cols>
 void Writ2DArr2csv(std::string filename, double (&array)[rows][cols]){
     fstream file(filename,ios::out);
@@ -310,7 +311,7 @@ void Writ2DArr2csv(std::string filename, double (&array)[rows][cols]){
     file.close();  
     cout<<"The results stored at: "<<filename<<endl;
 }
-
+*/
 void Writ2DArr2csv2(std::string filename, double** array,int rows, int cols){
     fstream file(filename,ios::out);
     
