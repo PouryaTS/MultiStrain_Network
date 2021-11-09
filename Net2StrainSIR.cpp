@@ -13,6 +13,7 @@
 //#include <thread>
 
 
+
 using namespace std;
 
 std::random_device rd;
@@ -20,7 +21,9 @@ std::mt19937 gen(rd());
 
 struct Vertex
 {
+    int Status_old = 0; 
     int Status = 0;
+    int Infector = -1;
     // Status: {S = 0 , I_s = 1, I_f=2, R_s=3, R_f=4, I_f_s=5, I_s_f=6, R=7}
     vector<int> adjList;
 };
@@ -91,7 +94,11 @@ for (double r:rVec)
     
         while (NofInfc>0 && timestep<1000)
         {
+            // Compute the next status and update the current status:
             Net2StrainSIR(beta_f, beta_s, mu_f, mu_s, sigma, NNode,Nodes);
+            
+            // Update the old status with the current status and prepare to compute the next step.
+            for (size_t i = 0; i < NNode; i++) {Nodes[i].Status_old = Nodes[i].Status;}
             int State_new[8] = {0};
             for (int i = 0; i < NNode; i++){
                 int S = Nodes[i].Status;
@@ -226,17 +233,20 @@ void InitializingNodes(int NNodes,int Nseed_1,int Nseed_2, Vertex Nodes[]){
     for (int i = 0; i < NNodes; i++)
     {
         Nodes[i].Status = 0;
+        Nodes[i].Status_old = 0;
         // Status: {S = 0, I_s = 1, I_f=2}
     }
     
     for (int v: split_1)
     {
         Nodes[v].Status = 1;
+        Nodes[v].Status_old = 1;
         // Status: {S = 0, I_s = 1, I_f=2}
     }
     for (int v: split_2)
     {
         Nodes[v].Status = 2;    
+        Nodes[v].Status_old = 2;
         // Status: {S = 0, I_s = 1, I_f=2}
     }
 }
@@ -251,51 +261,58 @@ void Net2StrainSIR(double beta_f, double beta_s, double mu_f, double mu_s, doubl
     // mu_f = P(If-->Rf) and P(Isf-->R)
     // mu_s = P(Is-->Rs) and P(Ifs-->R)
 
-    Vertex NodeTemp[NNodes];
-    for (size_t i = 0; i < NNodes; i++) {NodeTemp[i] = Nodes[i];}
+    //Vertex NodeTemp[NNodes];
+    //for (size_t i = 0; i < NNodes; i++) {NodeTemp[i] = Nodes[i];}
 
 
     for (size_t i = 0; i < NNodes; i++){
         
-        if (NodeTemp[i].Status == 1 || NodeTemp[i].Status == 5 ){
-
-            for (int v: NodeTemp[i].adjList) {
+        if (Nodes[i].Status_old == 1 || Nodes[i].Status_old == 5 ){ // if Status == I_s or I_fs
+            // transmition 
+            for (int v: Nodes[i].adjList) {
                 double r1 = unifreal_dis(gen);
-                if (NodeTemp[v].Status == 0 && r1 < beta_s ){
-                    Nodes[v].Status = 1;
+                if (Nodes[v].Status_old == 0 && r1 < beta_s ){ // if Status==S
+                    Nodes[v].Status = 1; //Status = I_s
+                    Nodes[v].Infector = i;
                     }
-                if (NodeTemp[v].Status == 4 && r1 < pt_f_s ){
-                    Nodes[v].Status = 5;
+                if (Nodes[v].Status_old == 4 && r1 < pt_f_s ){ // if Status==R_f
+                    Nodes[v].Status = 5; // Status = I_fs
+                    Nodes[v].Infector = i;
                     }
             }
+            // recovery
             double r2 = unifreal_dis(gen);
-            if(NodeTemp[i].Status == 1 && r2 < mu_s  ){
-                Nodes[i].Status = 3;
-            } else if(NodeTemp[i].Status == 5 && r2 < mu_s ){
-                Nodes[i].Status = 7;
+            if(Nodes[i].Status_old == 1 && r2 < mu_s  ){ // if Status == I_s
+                Nodes[i].Status = 3; // Status = R_s
+            } else if(Nodes[i].Status_old == 5 && r2 < mu_s ){ // if Status == I_fs
+                Nodes[i].Status = 7; // Status = R
             }
             
-        } else if (NodeTemp[i].Status == 2 || NodeTemp[i].Status == 6 ){
-            
-            for (int v: NodeTemp[i].adjList) {
+        } else if (Nodes[i].Status_old == 2 || Nodes[i].Status_old == 6 ){ // if Status == I_f or I_sf
+            // transmition
+            for (int v: Nodes[i].adjList) {
                 double r1 = unifreal_dis(gen);
-                if (NodeTemp[v].Status == 0 && r1 < beta_f  ){
-                    Nodes[v].Status = 2;
+                if (Nodes[v].Status_old == 0 && r1 < beta_f  ){ // if Status==S
+                    Nodes[v].Status = 2; //Status = I_f
+                    Nodes[v].Infector = i;
                     }
-                if (NodeTemp[v].Status == 3 && r1 < pt_s_f  ){
-                    Nodes[v].Status = 6;
+                if (Nodes[v].Status_old == 3 && r1 < pt_s_f  ){ // if Status==R_s
+                    Nodes[v].Status = 6; // Status = I_sf
+                    Nodes[v].Infector = i;
                     }
             }
+            // recovery
             double r2 = unifreal_dis(gen);
-            if(NodeTemp[i].Status == 2 && r2 < mu_f ){
-                Nodes[i].Status = 4;
-            } else if(NodeTemp[i].Status == 6 && r2 < mu_f ){
-                Nodes[i].Status = 7;
+            if(Nodes[i].Status_old == 2 && r2 < mu_f ){// if Status == I_f
+                Nodes[i].Status = 4; // Status = R_f
+            } else if(Nodes[i].Status_old == 6 && r2 < mu_f ){ // if Status == I_sf
+                Nodes[i].Status = 7; // Status = R
             }
         } 
     }
     
 }
+
 /*
 template <size_t rows, size_t cols>
 void Writ2DArr2csv(std::string filename, double (&array)[rows][cols]){
@@ -312,6 +329,7 @@ void Writ2DArr2csv(std::string filename, double (&array)[rows][cols]){
     cout<<"The results stored at: "<<filename<<endl;
 }
 */
+
 void Writ2DArr2csv2(std::string filename, double** array,int rows, int cols){
     fstream file(filename,ios::out);
     
