@@ -8,9 +8,10 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <array>
 //#include <EigenRand/EigenRand>
 #include <Eigen/Dense>
-//#include <thread>
+
 
 
 
@@ -39,7 +40,7 @@ void Writ2DArr2csv2(std::string filename, double** array,int rows, int cols);
 
 int main(){
 
-
+    
     int NNode = 10000;
     Vertex Nodes[NNode];
     int Nseed1 = 50, Nseed2 = 50;
@@ -68,6 +69,12 @@ int main(){
 
     int rC=0;
     int sigmaC = 0;
+    
+    string Path = string(get_current_dir_name());
+    string fileTransTrack = Path+"/TransmitionTrack.csv";
+    string fileTimeSerie = Path+"/TimeSerie.csv";
+    fstream file1(fileTransTrack,ios::out);
+    fstream file2(fileTimeSerie,ios::out);
 for (double r:rVec)
 {   
     
@@ -75,13 +82,18 @@ for (double r:rVec)
     for (double sigma:sigmaVec)
    {  
 
-
+    
     double beta_f = R0_f*mu_f;
     double mu_s = mu_f/tau;
     double beta_s = (r*R0_f)*mu_s;
     
     int itr = 2;
     int IcidenceMatrix[itr][2]={0}; 
+    std::array<int, 10> Res_timeserie;
+    std::vector<std::array<int, 10>> Res_timeserie_table;
+    std::array<int, 7> Res_TransmitionTrack;
+    std::vector<std::array<int, 7>> Res_TransmitionTrack_table;
+
     for (int itrC = 0; itrC < itr; itrC++){
     
         InitializingNodes(NNode, Nseed1, Nseed2, Nodes);
@@ -97,13 +109,29 @@ for (double r:rVec)
             // Compute the next status and update the current status:
             Net2StrainSIR(beta_f, beta_s, mu_f, mu_s, sigma, NNode,Nodes);
             
-            // Update the old status with the current status and prepare to compute the next step.
-            for (size_t i = 0; i < NNode; i++) {Nodes[i].Status_old = Nodes[i].Status;}
             int State_new[8] = {0};
-            for (int i = 0; i < NNode; i++){
+            for (int i = 0; i < NNode; i++) {
+                if((Nodes[i].Status_old != Nodes[i].Status) && (Nodes[i].Status == 1||Nodes[i].Status == 2||Nodes[i].Status ==5||Nodes[i].Status ==6)){
+                    int Status_o = Nodes[i].Status_old ;
+                    int Status_n = Nodes[i].Status ;
+                    int Infector = Nodes[i].Infector ;
+                    int Status_Infctor = Nodes[Infector].Status_old ;
+                    Res_TransmitionTrack = {itrC,timestep,i,Status_o ,Status_n, Infector,Status_Infctor};
+                    Res_TransmitionTrack_table.push_back(Res_TransmitionTrack);
+                }
+                
                 int S = Nodes[i].Status;
                 State_new[S] +=1;
             }
+            Res_timeserie[0]=itrC;
+            Res_timeserie[1]=timestep;
+            for (int i = 2; i < 10; i++){Res_timeserie[i]=State_new[i-2];}
+            
+            Res_timeserie_table.push_back(Res_timeserie);
+
+            // Update the old status with the current status and prepare to compute the next step.
+            for (size_t i = 0; i < NNode; i++) {Nodes[i].Status_old = Nodes[i].Status;}
+            
             int New_s = ((State_new[1]-State_old[1])<0) ? 0 : (State_new[1]-State_old[1]);
             int New_fs = ((State_new[5]-State_old[5])<0) ? 0 : (State_new[5]-State_old[5]);
             int IncidenceNew_s = New_s+New_fs;
@@ -148,7 +176,34 @@ for (double r:rVec)
     ResMatrix1[rC][sigmaC] = Sum1;
     ResMatrix2[rC][sigmaC] = Sum2;
 
-
+    for ( int itt = 0 ; itt < Res_TransmitionTrack_table.size(); ++itt)
+    {
+        file1 << r <<","<< sigma;
+        for (int ittt = 0; ittt < 7; ittt++)
+        { 
+            file1 << ","<<Res_TransmitionTrack_table[itt][ittt];
+        }
+        file1 << "\n";
+    }
+    for ( int itt = 0 ; itt < Res_timeserie_table.size(); ++itt)
+    {
+        file2 << r << "," << sigma;
+        for (int ittt = 0; ittt < 10; ittt++)
+        {
+            file2 << ","<<Res_timeserie_table[itt][ittt];
+        }
+        file2 << "\n";
+    }
+/*
+    for ( int itt = 0 ; itt < Res_timeserie_table.size(); ++itt)
+    {
+        for (int ittt = 0; ittt < 10; ittt++)
+        {
+        cout << Res_timeserie_table[itt][ittt]<< ",";
+        }
+        cout << endl;
+    }*/
+    
 
         sigmaC+=1;
         cout << "r="<<r<<" sigma="<<sigma<<endl;
@@ -156,6 +211,9 @@ for (double r:rVec)
    rC+=1;
    
 }
+
+file1.close();
+file2.close();  
 
     for(int i=0;i<rows;i++){
         cout << ResMatrix1[i][0];
@@ -165,7 +223,7 @@ for (double r:rVec)
         cout<<"\n"; 
     }
 
-    string Path = string(get_current_dir_name());
+    //string Path = string(get_current_dir_name());
     char FileName1[128];
     snprintf(FileName1,sizeof(FileName1), "SIR2Strain_Inc_S_N=%d.csv",NNode);
     string Filepath1 = Path+"/"+(string)FileName1;
