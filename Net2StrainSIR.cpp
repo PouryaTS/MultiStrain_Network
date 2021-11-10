@@ -30,7 +30,7 @@ std::uniform_real_distribution<double> unifreal_dis(0.0, 1.0);
 void CreateErdosReinyGraph(double p_grph, int NNodes, Vertex Nodes[]);
 void InitializingNodes(int NNodes, int Nseed_1, int Nseed_2, Vertex Nodes[]);
 void Net2StrainSIR(double beta_f, double beta_s, double mu_f, double mu_s, double sigma, int NNodes, Vertex Nodes[]);
-void Writ2DArr2csv2(std::string filename, double **array, int rows, int cols);
+void Writ2DArr2csv(std::string filename, double **array, int rows, int cols);
 
 int main()
 {
@@ -48,29 +48,27 @@ int main()
     vector<double> sigmaVec;
     for (double ri = 0.6; ri <= 1.6; ri += 0.1){rVec.push_back(ri);}
     for (double sigmai = 0.0; sigmai <= 1; sigmai += 0.1){sigmaVec.push_back(sigmai);}
+    
     int rows = rVec.size();
     int cols = sigmaVec.size();
-
-    double **ResMatrix1;
-    ResMatrix1 = new double *[rows];
-    for (int i = 0; i < cols; i++)
-        ResMatrix1[i] = new double[cols];
-
-    double **ResMatrix2;
-    ResMatrix2 = new double *[rows];
-    for (int i = 0; i < cols; i++)
-        ResMatrix2[i] = new double[cols];
 
     int rC = 0;
     int sigmaC = 0;
 
     string Path = string(get_current_dir_name());
-    string fileTransTrack = Path + "/TransmitionTrack.csv";
-    string fileTimeSerie = Path + "/TimeSerie.csv";
-    fstream file1(fileTransTrack, ios::out);
-    fstream file2(fileTimeSerie, ios::out);
+    char FileName1[128];
+    char FileName2[128];
+    snprintf(FileName1, sizeof(FileName1), "TransmitionTrack_Rf=%.2f_muf=%.2f_tau=%.2f.csv", R0_f, mu_f, tau);
+    snprintf(FileName2, sizeof(FileName2), "TimeSerie_Rf=%.2f_muf=%.2f_tau=%.2f.csv", R0_f, mu_f, tau);
+    string Filepath1 = Path + "/" + (string)FileName1;
+    string Filepath2 = Path + "/" + (string)FileName2;
+    fstream file1(Filepath1, ios::out);
+    fstream file2(Filepath2, ios::out);
+    file1 << "r,sigma,itr,t,node,status_previous,status_current,Infector,status_Infector";
+    file1 << endl;
     file2 << "r,sigma,itr,t,S,I_s,I_f,R_s,R_f,I_f_s,I_s_f,R,Inc_s,Inc_f,Ins_fs,Inc_sf";
     file2 << endl;
+    
     for (double r : rVec)
     {
 
@@ -83,8 +81,7 @@ int main()
             double beta_s = (r * R0_f) * mu_s;
 
             int itr = 10;
-            int IcidenceMatrix[itr][2] = {0};
-            std::array<int, 14> Res_timeserie;
+            std::array<int, 14> State_current;
             std::vector<std::array<int, 14>> Res_timeserie_table;
             std::array<int, 7> Res_TransmitionTrack;
             std::vector<std::array<int, 7>> Res_TransmitionTrack_table;
@@ -93,19 +90,20 @@ int main()
             {
 
                 InitializingNodes(NNode, Nseed1, Nseed2, Nodes);
-                int timestep = 0;
+                int timestep = 1;
                 int NofInfc = Nseed1 + Nseed2;
-                int State_old[12] = {NNode - NofInfc, Nseed1, Nseed2, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-                int Incidence_s = Nseed1;
-                int Incidence_f = Nseed2;
+                State_current = {itrC,0,NNode - NofInfc, Nseed1, Nseed2, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+                Res_timeserie_table.push_back(State_current);
 
                 while (NofInfc > 0 && timestep < 1000)
                 {
                     // Compute the next status and update the current status:
-                    Net2StrainSIR(beta_f, beta_s, mu_f, mu_s, sigma, NNode, Nodes);
-
-                    int State_new[12] = {0};
+                    Net2StrainSIR(beta_f, beta_s, mu_f, mu_s, sigma, NNode, Nodes);                    
+                    // Compute and recorde the result:
+                    State_current = {0};
+                    State_current[0] = itrC;
+                    State_current[1] = timestep;
                     for (int i = 0; i < NNode; i++)
                     {
                         if ((Nodes[i].Status_old != Nodes[i].Status) && (Nodes[i].Status == 1 || Nodes[i].Status == 2 || Nodes[i].Status == 5 || Nodes[i].Status == 6))
@@ -121,60 +119,36 @@ int main()
                             // Couting the number of new case for different status (attack rate)
                             if (Status_n == 1)
                             { // Incidence_s = 1
-                                State_new[8] += 1;
+                                State_current[10] += 1;
                             }
                             else if (Status_n == 2)
                             { //Incidence_f
-                                State_new[9] += 1;
+                                State_current[11] += 1;
                             }
                             else if (Status_n == 5)
                             { //Incidence_f_s
-                                State_new[10] += 1;
+                                State_current[12] += 1;
                             }
                             else if (Status_n == 6)
                             { //Incidence_s_f
-                                State_new[11] += 1;
+                                State_current[13] += 1;
                             }
                         }
                         // Counting the number of cases in each status
                         int S = Nodes[i].Status;
-                        State_new[S] += 1;
+                        State_current[S+2] += 1;
                     }
-                    Res_timeserie[0] = itrC;
-                    Res_timeserie[1] = timestep;
-                    for (int i = 2; i < 14; i++){Res_timeserie[i] = State_new[i - 2];}
 
-                    Res_timeserie_table.push_back(Res_timeserie);
-
+                    Res_timeserie_table.push_back(State_current);
                     // Update the old status with the current status and prepare to compute the next step.
                     for (size_t i = 0; i < NNode; i++){Nodes[i].Status_old = Nodes[i].Status;}
 
-                    for (int i = 0; i < 12; i++){State_old[i] = State_new[i];}
-                    
+                    NofInfc = State_current[3] + State_current[4] + State_current[7] + State_current[8];
                     timestep += 1;
-                    NofInfc = State_new[1] + State_new[2] + State_new[5] + State_new[6];
-                    int IncidenceNew_f = State_new[8] + State_new[10];
-                    int IncidenceNew_s = State_new[9] + State_new[11];
-                    Incidence_s = Incidence_s + IncidenceNew_s;
-                    Incidence_f = Incidence_f + IncidenceNew_f;
     
                 }
 
-                IcidenceMatrix[itrC][0] = Incidence_s;
-                IcidenceMatrix[itrC][1] = Incidence_f;
             }
-
-            double Sum1 = 0, Sum2 = 0;
-            for (int i = 0; i < itr; i++)
-            {
-                Sum1 += IcidenceMatrix[i][0];
-                Sum2 += IcidenceMatrix[i][1];
-            }
-            Sum1 = ((double)Sum1) / (double)itr;
-            Sum2 = ((double)Sum2) / (double)itr;
-
-            ResMatrix1[rC][sigmaC] = Sum1;
-            ResMatrix2[rC][sigmaC] = Sum2;
 
             for (int itt = 0; itt < Res_TransmitionTrack_table.size(); ++itt)
             {
@@ -204,41 +178,12 @@ int main()
     }
 
     file1.close();
+    cout << "The results stored at: " << Filepath1 << endl;
     file2.close();
+    cout << "The results stored at: " << Filepath2 << endl;
 
-    for (int i = 0; i < rows; i++)
-    {
-        cout << ResMatrix1[i][0];
-        for (int j = 1; j < cols; j++)
-        {
-            cout << ", " << ResMatrix1[i][j];
-        }
-        cout << "\n";
-    }
 
-    char FileName1[128];
-    snprintf(FileName1, sizeof(FileName1), "SIR2Strain_Inc_S_N=%d.csv", NNode);
-    string Filepath1 = Path + "/" + (string)FileName1;
-    char FileName2[128];
-    snprintf(FileName2, sizeof(FileName2), "SIR2Strain_Inc_F_N=%d_Rf=%f_muf=%f_tau=%f.csv", NNode, R0_f, mu_f, tau);
-    string Filepath2 = Path + "/" + (string)FileName2;
 
-    Writ2DArr2csv2(Filepath1, ResMatrix1, rows, cols);
-    Writ2DArr2csv2(Filepath2, ResMatrix2, rows, cols);
-
-    for (int i = 0; i < rows; i++)
-    {
-        delete[] ResMatrix1[i];
-    }
-
-    delete[] ResMatrix1;
-
-    for (int i = 0; i < rows; i++)
-    {
-        delete[] ResMatrix2[i];
-    }
-
-    delete[] ResMatrix2;
 
     return 0;
 }
@@ -377,7 +322,7 @@ void Net2StrainSIR(double beta_f, double beta_s, double mu_f, double mu_s, doubl
     }
 }
 
-void Writ2DArr2csv2(std::string filename, double **array, int rows, int cols)
+void Writ2DArr2csv(std::string filename, double **array, int rows, int cols)
 {
     fstream file(filename, ios::out);
 
