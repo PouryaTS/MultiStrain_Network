@@ -55,20 +55,27 @@ int main()
     int rC = 0;
     int sigmaC = 0;
 
+    bool ProduceEventMatix = false;
     string Path = string(get_current_dir_name());
+
     char FileName1[128];
-    char FileName2[128];
     snprintf(FileName1, sizeof(FileName1), "TransmitionTrack_Rf=%.2f_muf=%.2f_tau=%.2f.csv", R0_f, mu_f, tau);
-    snprintf(FileName2, sizeof(FileName2), "TimeSerie_Rf=%.2f_muf=%.2f_tau=%.2f.csv", R0_f, mu_f, tau);
     string Filepath1 = Path + "/" + (string)FileName1;
-    string Filepath2 = Path + "/" + (string)FileName2;
-    fstream file1(Filepath1, ios::out);
-    fstream file2(Filepath2, ios::out);
+    ofstream file1;
+    if(ProduceEventMatix){
+    file1.open(Filepath1);
     file1 << "r,sigma,itr,t,node,status_previous,status_current,Infector,status_Infector";
     file1 << endl;
-    file2 << "r,sigma,itr,t,S,I_s,I_f,R_s,R_f,I_f_s,I_s_f,R,Inc_s,Inc_f,Ins_fs,Inc_sf";
+    }
+    char FileName2[128];
+    snprintf(FileName2, sizeof(FileName2), "TimeSerie_Rf=%.2f_muf=%.2f_tau=%.2f.csv", R0_f, mu_f, tau);
+    string Filepath2 = Path + "/" + (string)FileName2;
+    ofstream file2;
+    file2.open(Filepath2);
+    file2 << "r,sigma,itr,t,S,I_s,I_f,R_s,R_f,I_f_s,I_s_f,R,Inc_s,Inc_f,Inc_fs,Inc_sf";
     file2 << endl;
-    
+
+    int itr = 40;
     for (double r : rVec)
     {
 
@@ -80,7 +87,6 @@ int main()
             double mu_s = mu_f / tau;
             double beta_s = (r * R0_f) * mu_s;
 
-            int itr = 10;
             std::array<int, 14> State_current;
             std::vector<std::array<int, 14>> Res_timeserie_table;
             std::array<int, 7> Res_TransmitionTrack;
@@ -113,9 +119,10 @@ int main()
                             int Infector = Nodes[i].Infector;
                             int Status_Infctor = Nodes[Infector].Status_old;
                             // Recording the transmition track
+                            if(ProduceEventMatix){
                             Res_TransmitionTrack = {itrC, timestep, i, Status_o, Status_n, Infector, Status_Infctor};
                             Res_TransmitionTrack_table.push_back(Res_TransmitionTrack);
-
+                            }
                             // Couting the number of new case for different status (attack rate)
                             if (Status_n == 1)
                             { // Incidence_s = 1
@@ -149,7 +156,8 @@ int main()
                 }
 
             }
-
+            if (ProduceEventMatix)
+            { 
             for (int itt = 0; itt < Res_TransmitionTrack_table.size(); ++itt)
             {
                 file1 << r << "," << sigma;
@@ -159,7 +167,7 @@ int main()
                 }
                 file1 << "\n";
             }
-
+            }
             for (int itt = 0; itt < Res_timeserie_table.size(); ++itt)
             {
                 file2 << r << "," << sigma;
@@ -177,11 +185,14 @@ int main()
         rC += 1;
     }
 
+    if(ProduceEventMatix){
     file1.close();
     cout << "The results stored at: " << Filepath1 << endl;
+    } 
+    
     file2.close();
     cout << "The results stored at: " << Filepath2 << endl;
-
+    
 
 
 
