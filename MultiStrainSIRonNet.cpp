@@ -183,9 +183,21 @@ int main()
             {
                 NofInfc = NofInfc + Nseeds[k];
             }
+            State_current.assign(State_current.size(), 0);
+            State_current[0] = itrC;
+            State_current[1] = 0;
+            int IndxISS = MapStateIndx2ColIndx1[MapState2Index[1][0][0]]; 
+            int IndxSIS = MapStateIndx2ColIndx1[MapState2Index[0][1][0]]; 
+            int IndxSSI = MapStateIndx2ColIndx1[MapState2Index[0][0][1]]; 
+            State_current[IndxISS] = Nseeds[0];
+            State_current[IndxSIS] = Nseeds[1];
+            State_current[IndxSSI] = Nseeds[2];
+            Res_timeserie_table.push_back(State_current);
+
 
             while (NofInfc > 0 && timestep < 1000)
             {
+                
                 // Compute the next status and update the current status:
                 MultiStrainSIRonNet(beta, mu, Sigma, NNode, Nodes);
                 // Compute and recorde the result:
