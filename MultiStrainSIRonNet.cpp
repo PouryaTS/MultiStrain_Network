@@ -30,7 +30,8 @@ std::mt19937 gen(rd());
 std::uniform_real_distribution<double> unifreal_dis(0.0, 1.0);
 
 void CreateErdosReinyGraph(double p_grph, int NNodes, Vertex Nodes[]);
-void InitializingSeeds(int NNodes, int Nstrains, int Nseeds[], Vertex Nodes[], bool ResetNodes = true);
+void InitializingSeeds(int NNodes, int Nstrains, int Nseeds[], Vertex Nodes[], const bool ResetNodes = true);
+void InitializingSeeds2(int NNodes, int Nstrains, int Nseeds[], Vertex Nodes[], const bool ResetNodes = true);
 void MultiStrainSIRonNet(double beta[], double mu[], double sigma[][NStrain], int NNodes, Vertex Nodes[]);
 int MapState2DecimalNumber(int State[], int Nstrains);
 int myPow(int x, int p);
@@ -49,11 +50,11 @@ int main()
     double R0_1 = 2, mu_1 = 0.6, tau = 1.5, r2 = 1.8, r3 =1;
     double beta_1 = R0_1 * mu_1/MeanDeg;
     double mu_2 = mu_1 / tau;
-    double mu_3 = 0;
+    double mu_3 = mu_2;
     double beta_2 = (r2 * R0_1) * mu_2/MeanDeg;
     double beta_3 = (r3 * R0_1) * mu_3/MeanDeg;
     
-    int Nseeds[NStrain] = {50, 50, 0};
+    int Nseeds[NStrain] = {50, 0, 0};
     double beta[NStrain] = {beta_1, beta_2, beta_3};
     double mu[NStrain] = {mu_1, mu_2, mu_3};
     
@@ -65,7 +66,7 @@ int main()
         {Sigma3 ,Sigma3 ,Sigma3}
         };
 
-    bool ProduceEventMatix = true;
+    const bool ProduceEventMatix = true;
 
     //==================================================================================================
     //  - Map the States to a decimal number Index. 
@@ -158,7 +159,7 @@ int main()
     ofstream file2;
     file2.open(Filepath2);
     file2 << HeaderFile2;
-    file2 << endl;
+    file2 << endl; 
     //========================================================
     //===========Creat Containers to store resuls============= 
     int maxIndx2 = *std::max_element(MapStateIndx2ColIndx2.begin(), MapStateIndx2ColIndx2.end());
@@ -168,15 +169,21 @@ int main()
     std::array<int, 7> Res_TransmitionTrack;
     std::vector<std::array<int, 7>> Res_TransmitionTrack_table;
     //========================================================
-
+    int IndxSSS = MapStateIndx2ColIndx1[MapState2Index[0][0][0]];
+    int IndxISS = MapStateIndx2ColIndx1[MapState2Index[1][0][0]]; 
+    int IndxSIS = MapStateIndx2ColIndx1[MapState2Index[0][1][0]]; 
+    int IndxSSI = MapStateIndx2ColIndx1[MapState2Index[0][0][1]]; 
+    int IndxRSS = MapStateIndx2ColIndx1[MapState2Index[2][0][0]]; 
+           
     int itr = 10;
     for (int itrC2 = 0; itrC2 < 50; itrC2++)
     {
-        
+        //std::vector<std::vector<int>> Res_timeserie_table;
+        //std::vector<std::array<int, 7>> Res_TransmitionTrack_table;    
         auto start = chrono::steady_clock::now();
         for (int itrC = 0; itrC < itr; itrC++)
         {
-            InitializingSeeds(NNode, NStrain, Nseeds, Nodes, true);
+            InitializingSeeds2(NNode, NStrain, Nseeds, Nodes, true);
             int timestep = 1;
             int NofInfc = 0, sumInfeced = 0;
             for (int k = 0; k < NStrain; k++)
@@ -186,15 +193,14 @@ int main()
             State_current.assign(State_current.size(), 0);
             State_current[0] = itrC;
             State_current[1] = 0;
-            int IndxISS = MapStateIndx2ColIndx1[MapState2Index[1][0][0]]; 
-            int IndxSIS = MapStateIndx2ColIndx1[MapState2Index[0][1][0]]; 
-            int IndxSSI = MapStateIndx2ColIndx1[MapState2Index[0][0][1]]; 
+            State_current[IndxSSS] = NNode - NofInfc;
             State_current[IndxISS] = Nseeds[0];
             State_current[IndxSIS] = Nseeds[1];
             State_current[IndxSSI] = Nseeds[2];
             Res_timeserie_table.push_back(State_current);
-
-
+            
+            int flag_emerge2 = 0;
+            int flag_emerge3 = 0;
             while (NofInfc > 0 && timestep < 1000)
             {
                 
@@ -235,7 +241,23 @@ int main()
                     int Ind1 = MapStateIndx2ColIndx1[Status_n];
                     State_current[Ind1] += 1;
                 }
-
+                int Ss1 = State_current[IndxSSS];
+                int Ss2 = State_current[IndxSSS]+State_current[IndxRSS];
+                
+                if (((double)Ss1/(double)NNode) < 0.5 && flag_emerge2 == 0)
+                {   
+                    flag_emerge2 = 1;
+                    int NseedNewVariant[NStrain] = {0, 50, 0};
+                    InitializingSeeds2(NNode, NStrain, NseedNewVariant, Nodes, false);
+                    State_current[IndxSIS] = NseedNewVariant[1];
+                }
+                if (((double)Ss1/(double)NNode) < 0.33 && flag_emerge3 == 0)
+                {   
+                    flag_emerge3 = 1;
+                    int NseedNewVariant[NStrain] = {0, 0, 50};
+                    InitializingSeeds2(NNode, NStrain, NseedNewVariant, Nodes, false);
+                    State_current[IndxSSI] = NseedNewVariant[2];
+                }
                 Res_timeserie_table.push_back(State_current);
                 // Update the old status with the current status and prepare to compute the next step.
                 for (size_t i = 0; i < NNode; i++)
@@ -283,11 +305,22 @@ int main()
 
         Res_timeserie_table.clear();
         Res_TransmitionTrack_table.clear();
+
         auto end = chrono::steady_clock::now();
         auto diff = end - start;
-        cout << "time: " << chrono::duration<double>(diff).count() << "s" << endl;
+        cout << itrC2<<" time: " << chrono::duration<double>(diff).count() << "s" << endl;
     }
-
+    
+    cout << ProduceEventMatix<<endl;
+    if(ProduceEventMatix){
+        cout <<"checkP 1"<<endl;
+        file1.close();
+        cout << "The results stored at: " << Filepath1 << endl;
+    } 
+    cout <<"checkP 2"<<endl;
+    file2.close();
+    cout << "The results stored at: " << Filepath2 << endl;
+    
     return 0;
 }
 
@@ -392,7 +425,7 @@ int myPow(int x, int p)
     return i;
 }
 
-void InitializingSeeds(int NNodes, int Nstrains, int Nseeds[], Vertex Nodes[], bool ResetNodes)
+void InitializingSeeds(int NNodes, int Nstrains, int Nseeds[], Vertex Nodes[], const bool ResetNodes)
 {
 
     std::uniform_int_distribution<int> unifint_dis(0, NNodes);
@@ -445,6 +478,55 @@ void InitializingSeeds(int NNodes, int Nstrains, int Nseeds[], Vertex Nodes[], b
             }
         }
         startpoint = endpoint;
+    }
+}
+
+void InitializingSeeds2(int NNodes, int Nstrains, int Nseeds[], Vertex Nodes[], const bool ResetNodes)
+{
+    std::uniform_int_distribution<int> unifint_dis(0, NNodes);
+    
+    if (ResetNodes)
+    {
+        for (int i = 0; i < NNodes; i++)
+        {
+            for (int k = 0; k < Nstrains; k++)
+            {
+                Nodes[i].Status[k] = 0;
+                Nodes[i].Status_old[k] = 0;
+                // Status: {S = 0, I = 1, R=2}
+            }
+            Nodes[i].Infector = -1;
+        }
+    }
+
+    vector<int> vec;
+   
+    for (int k = 0; k < Nstrains; k++)
+    {
+        int Nseedi = Nseeds[k];
+        int n = 0;
+        while (n < Nseedi)
+        {
+            int number = unifint_dis(gen);
+            auto result1 = std::find(begin(vec), end(vec), number);
+            double alpha_Ik = 1;
+            for (int kk = 0; kk < NStrain; kk++)
+            {
+                if (Nodes[number].Status[kk] == 1)
+                {
+                    alpha_Ik = 0;
+                    break;
+                }
+            }
+            if (result1 == std::end(vec) && alpha_Ik==1)
+            {   
+                Nodes[number].Status[k] = 1;
+                Nodes[number].Status_old[k] = 1;
+                // Status: {S = 0, S = 1, R=2}
+                vec.push_back(number);
+                n++;
+            }
+        }
     }
 }
 
