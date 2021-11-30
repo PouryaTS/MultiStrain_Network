@@ -37,7 +37,7 @@ int MapState2DecimalNumber(int State[], int Nstrains);
 int myPow(int x, int p);
 
 int main()
-{   
+{
     char label[] = "SIR";
     int NNode = 10000;
     Vertex Nodes[NNode];
@@ -46,42 +46,40 @@ int main()
     double p_grph = (double)MeanDeg / (double)NNode; // p = 0.005
     CreateErdosReinyGraph(p_grph, NNode, Nodes);
 
-    
-    double R0_1 = 2, mu_1 = 0.6, tau = 1.5, r2 = 1.8, r3 =1;
-    double beta_1 = R0_1 * mu_1/MeanDeg;
+    double R0_1 = 2, mu_1 = 0.6, tau = 1.5, r2 = 1.8, r3 = 1;
+    double beta_1 = R0_1 * mu_1 / MeanDeg;
     double mu_2 = mu_1 / tau;
     double mu_3 = mu_2;
-    double beta_2 = (r2 * R0_1) * mu_2/MeanDeg;
-    double beta_3 = (r3 * R0_1) * mu_3/MeanDeg;
-    
+    double beta_2 = (r2 * R0_1) * mu_2 / MeanDeg;
+    double beta_3 = (r3 * R0_1) * mu_3 / MeanDeg;
+    double R0_12 = MeanDeg * (beta_1 + beta_2) / (mu_1 + mu_2);
     int Nseeds[NStrain] = {50, 0, 0};
     double beta[NStrain] = {beta_1, beta_2, beta_3};
     double mu[NStrain] = {mu_1, mu_2, mu_3};
-    
-    double Sigma12=0.05;
-    double Sigma3 = 0.5; 
-    double Sigma[3][NStrain]={
-        {Sigma12,Sigma12,Sigma3},
-        {Sigma12,Sigma12,Sigma3},
-        {Sigma3 ,Sigma3 ,Sigma3}
-        };
+
+    double Sigma12 = 0.05;
+    double Sigma3 = 0.5;
+    double Sigma[3][NStrain] = {
+        {Sigma12, Sigma12, Sigma3},
+        {Sigma12, Sigma12, Sigma3},
+        {Sigma3, Sigma3, Sigma3}};
 
     const bool ProduceEventMatix = true;
 
     //==================================================================================================
-    //  - Map the States to a decimal number Index. 
+    //  - Map the States to a decimal number Index.
     //  - Map the States Index to the Column Index of file.
-    //  - Extract Valid States (Infection coexistance is forbbiden) and Infected States (SSI,SIS,...). 
-    //  - Create labels of the states and the header of files. 
+    //  - Extract Valid States (Infection coexistance is forbbiden) and Infected States (SSI,SIS,...).
+    //  - Create labels of the states and the header of files.
     //==================================================================================================
-    
-    std::array<string, NState> LabelArray; //Label of each state (S->0, I->1, R->2)
-    int MapState2Index[3][3][3]; // Maping Matrix-Maps states to a decimal index (000=0, 001 = 1,002 = 2, 010=3, ...).
-    std::vector<int> ValidStatus; //Valid States (Infection coexistance is forbbiden)
-    std::vector<int> InfectedStatus; //Infected States (SSI,SIS,...)
+
+    std::array<string, NState> LabelArray;         //Label of each state (S->0, I->1, R->2)
+    int MapState2Index[3][3][3];                   // Maping Matrix-Maps states to a decimal index (000=0, 001 = 1,002 = 2, 010=3, ...).
+    std::vector<int> ValidStatus;                  //Valid States (Infection coexistance is forbbiden)
+    std::vector<int> InfectedStatus;               //Infected States (SSI,SIS,...)
     std::array<int, NState> MapStateIndx2ColIndx1; // Index1 -> Column index of pupulation in each state
     std::array<int, NState> MapStateIndx2ColIndx2; // Index2 -> Column index of Infection Incident for each Infected state.
-    
+
     for (int i = 0; i < 3; i++)
     {
         for (int j = 0; j < 3; j++)
@@ -116,19 +114,19 @@ int main()
     MapStateIndx2ColIndx1.fill(-1);
     for (int it = 0; it < ValidStatus.size(); it++)
     {
-        MapStateIndx2ColIndx1[ValidStatus[it]]=it+2;
+        MapStateIndx2ColIndx1[ValidStatus[it]] = it + 2;
     }
     int maxIndx1 = *std::max_element(MapStateIndx2ColIndx1.begin(), MapStateIndx2ColIndx1.end());
     MapStateIndx2ColIndx2.fill(-1);
     for (int it = 0; it < InfectedStatus.size(); it++)
     {
-        MapStateIndx2ColIndx2[InfectedStatus[it]]=it+maxIndx1+1;
+        MapStateIndx2ColIndx2[InfectedStatus[it]] = it + maxIndx1 + 1;
     }
-    
+
     //==============Header of the Result files ===============
     string HeaderFile1 = "itr,t,node,status_previous,status_current,Infector,status_Infector";
     string HeaderFile2;
-    HeaderFile2 += "it, t";
+    HeaderFile2 += "pt1, pt2, it, t";
     for (int it = 0; it < ValidStatus.size(); it++)
     {
         HeaderFile2 += ", ";
@@ -159,9 +157,9 @@ int main()
     ofstream file2;
     file2.open(Filepath2);
     file2 << HeaderFile2;
-    file2 << endl; 
+    file2 << endl;
     //========================================================
-    //===========Creat Containers to store resuls============= 
+    //===========Creat Containers to store resuls=============
     int maxIndx2 = *std::max_element(MapStateIndx2ColIndx2.begin(), MapStateIndx2ColIndx2.end());
     const int StateArraySize = maxIndx2;
     std::vector<int> State_current((StateArraySize + 1), 0);
@@ -170,163 +168,158 @@ int main()
     std::vector<std::array<int, 7>> Res_TransmitionTrack_table;
     //========================================================
     int IndxSSS = MapStateIndx2ColIndx1[MapState2Index[0][0][0]];
-    int IndxISS = MapStateIndx2ColIndx1[MapState2Index[1][0][0]]; 
-    int IndxSIS = MapStateIndx2ColIndx1[MapState2Index[0][1][0]]; 
-    int IndxSSI = MapStateIndx2ColIndx1[MapState2Index[0][0][1]]; 
-    int IndxRSS = MapStateIndx2ColIndx1[MapState2Index[2][0][0]]; 
-           
+    int IndxISS = MapStateIndx2ColIndx1[MapState2Index[1][0][0]];
+    int IndxSIS = MapStateIndx2ColIndx1[MapState2Index[0][1][0]];
+    int IndxSSI = MapStateIndx2ColIndx1[MapState2Index[0][0][1]];
+    int IndxRSS = MapStateIndx2ColIndx1[MapState2Index[2][0][0]];
+
+    double pt1 = 0.6, pt2 = 0.65;
     int itr = 10;
-    for (int itrC2 = 0; itrC2 < 50; itrC2++)
+    for (double pt1 = 0.6; pt1 < 1.65; pt1 += 0.1)
     {
-        //std::vector<std::vector<int>> Res_timeserie_table;
-        //std::vector<std::array<int, 7>> Res_TransmitionTrack_table;    
-        auto start = chrono::steady_clock::now();
-        for (int itrC = 0; itrC < itr; itrC++)
+        for (double pt2 = 0.5; pt2 < 0.64; pt2 += 0.02)
         {
-            InitializingSeeds2(NNode, NStrain, Nseeds, Nodes, true);
-            int timestep = 1;
-            int NofInfc = 0, sumInfeced = 0;
-            for (int k = 0; k < NStrain; k++)
+            auto start = chrono::steady_clock::now();
+            for (int itrC = 0; itrC < itr; itrC++)
             {
-                NofInfc = NofInfc + Nseeds[k];
-            }
-            State_current.assign(State_current.size(), 0);
-            State_current[0] = itrC;
-            State_current[1] = 0;
-            State_current[IndxSSS] = NNode - NofInfc;
-            State_current[IndxISS] = Nseeds[0];
-            State_current[IndxSIS] = Nseeds[1];
-            State_current[IndxSSI] = Nseeds[2];
-            Res_timeserie_table.push_back(State_current);
-            
-            int flag_emerge2 = 0;
-            int flag_emerge3 = 0;
-            while (NofInfc > 0 && timestep < 1000)
-            {
-                
-                // Compute the next status and update the current status:
-                MultiStrainSIRonNet(beta, mu, Sigma, NNode, Nodes);
-                // Compute and recorde the result:
-                State_current.assign(State_current.size(), 0);
-                State_current[0] = itrC;
-                State_current[1] = timestep;
-                for (int i = 0; i < NNode; i++)
+                InitializingSeeds2(NNode, NStrain, Nseeds, Nodes, true);
+                int timestep = 0;
+                int NofInfc = 0;
+                for (int k = 0; k < NStrain; k++)
                 {
-                    int Status_o = MapState2Index[Nodes[i].Status_old[0]][Nodes[i].Status_old[1]][Nodes[i].Status_old[2]];
-                    int Status_n = MapState2Index[Nodes[i].Status[0]][Nodes[i].Status[1]][Nodes[i].Status[2]];
-                    bool StatusChange = (Status_o != Status_n);
-                    double alpha_Ik = 1;
-                    for (int kk = 0; kk < NStrain; kk++)
+                    NofInfc = NofInfc + Nseeds[k];
+                }
+
+                int flag_emerge2 = 0;
+                int flag_emerge3 = 0;
+                int SSS0 = NNode - NofInfc;
+                while (NofInfc > 0 && timestep < 1000)
+                {
+
+                    // Compute and recorde the current Status:
+                    State_current.assign(State_current.size(), 0);
+                    State_current[0] = itrC;
+                    State_current[1] = timestep;
+                    for (int i = 0; i < NNode; i++)
                     {
-                        if (Nodes[i].Status[kk] == 1)
+                        int Status_o = MapState2Index[Nodes[i].Status_old[0]][Nodes[i].Status_old[1]][Nodes[i].Status_old[2]];
+                        int Status_n = MapState2Index[Nodes[i].Status[0]][Nodes[i].Status[1]][Nodes[i].Status[2]];
+                        bool StatusChange = (Status_o != Status_n);
+                        double alpha_Ik = 1;
+                        for (int kk = 0; kk < NStrain; kk++)
                         {
-                            alpha_Ik = 0;
-                            break;
+                            if (Nodes[i].Status[kk] == 1)
+                            {
+                                alpha_Ik = 0;
+                                break;
+                            }
+                        }
+                        bool existsI = (alpha_Ik == 0);
+                        if (StatusChange && existsI)
+                        {
+                            int Infector = Nodes[i].Infector;
+                            int Status_Infctor = MapState2Index[Nodes[Infector].Status_old[0]][Nodes[Infector].Status_old[1]][Nodes[Infector].Status_old[2]];
+                            // Recording the transmition track
+                            if (ProduceEventMatix)
+                            {
+                                Res_TransmitionTrack = {itrC, timestep, i, Status_o, Status_n, Infector, Status_Infctor};
+                                Res_TransmitionTrack_table.push_back(Res_TransmitionTrack);
+                            }
+                            int Ind2 = MapStateIndx2ColIndx2[Status_n];
+                            State_current[Ind2] += 1;
+                        }
+                        int Ind1 = MapStateIndx2ColIndx1[Status_n];
+                        State_current[Ind1] += 1;
+                    }
+                    Res_timeserie_table.push_back(State_current);
+
+                    // Update the old status with the current status and prepare to compute the next step.
+                    for (size_t i = 0; i < NNode; i++)
+                    {
+                        for (int k = 0; k < NStrain; k++)
+                        {
+                            Nodes[i].Status_old[k] = Nodes[i].Status[k];
                         }
                     }
-                    bool existsI = (alpha_Ik == 0);
-                    if (StatusChange && existsI)
+
+                    NofInfc = 0;
+                    for (int s : InfectedStatus)
                     {
-                        int Infector = Nodes[i].Infector;
-                        int Status_Infctor = MapState2Index[Nodes[Infector].Status_old[0]][Nodes[Infector].Status_old[1]][Nodes[Infector].Status_old[2]];
-                        // Recording the transmition track
-                        if (ProduceEventMatix)
-                        {
-                            Res_TransmitionTrack = {itrC, timestep, i, Status_o, Status_n, Infector, Status_Infctor};
-                            Res_TransmitionTrack_table.push_back(Res_TransmitionTrack);
-                        }
-                        int Ind2 = MapStateIndx2ColIndx2[Status_n];
-                        State_current[Ind2] += 1;
+                        NofInfc += State_current[MapStateIndx2ColIndx1[s]];
                     }
-                    int Ind1 = MapStateIndx2ColIndx1[Status_n];
-                    State_current[Ind1] += 1;
-                }
-                int Ss1 = State_current[IndxSSS];
-                int Ss2 = State_current[IndxSSS]+State_current[IndxRSS];
-                
-                if (((double)Ss1/(double)NNode) < 0.5 && flag_emerge2 == 0)
-                {   
-                    flag_emerge2 = 1;
-                    int NseedNewVariant[NStrain] = {0, 50, 0};
-                    InitializingSeeds2(NNode, NStrain, NseedNewVariant, Nodes, false);
-                    State_current[IndxSIS] = NseedNewVariant[1];
-                }
-                if (((double)Ss1/(double)NNode) < 0.33 && flag_emerge3 == 0)
-                {   
-                    flag_emerge3 = 1;
-                    int NseedNewVariant[NStrain] = {0, 0, 50};
-                    InitializingSeeds2(NNode, NStrain, NseedNewVariant, Nodes, false);
-                    State_current[IndxSSI] = NseedNewVariant[2];
-                }
-                Res_timeserie_table.push_back(State_current);
-                // Update the old status with the current status and prepare to compute the next step.
-                for (size_t i = 0; i < NNode; i++)
-                {
-                    for (int k = 0; k < NStrain; k++)
+                    timestep += 1;
+
+                    // Compute the next status and update the current status:
+                    MultiStrainSIRonNet(beta, mu, Sigma, NNode, Nodes);
+
+                    // Emerge new strains
+                    int SSS1 = State_current[IndxSSS];
+                    if (((double)SSS1 / (double)SSS0) < (1 / (pt1 * R0_1)) && flag_emerge2 == 0)
                     {
-                        Nodes[i].Status_old[k] = Nodes[i].Status[k];
+                        SSS0 = SSS1;
+                        flag_emerge2 = 1;
+                        int NseedNewVariant[NStrain] = {0, 50, 0};
+                        InitializingSeeds2(NNode, NStrain, NseedNewVariant, Nodes, false);
+                        //cout << timestep << " flag2: " << R0_1 << " " << SSS0 << endl;
+                    }
+                    if (((double)SSS1 / (double)SSS0) < (1 / (pt2 * R0_12)) && flag_emerge2 == 1 && flag_emerge3 == 0)
+                    {
+                        flag_emerge3 = 1;
+                        int NseedNewVariant[NStrain] = {0, 0, 50};
+                        InitializingSeeds2(NNode, NStrain, NseedNewVariant, Nodes, false);
+                        //cout << timestep<< " flag3: "<<R0_12<<" "<< SSS1 <<" "<<SSS0<< endl;
                     }
                 }
-
-                NofInfc = 0;
-                for (int s : InfectedStatus)
-                {
-                    NofInfc += State_current[MapStateIndx2ColIndx1[s]];
-                }
-                timestep += 1;
-                //cout<<NofInfc<<endl;
+                //cout << itrC << " " << timestep << endl;
             }
-            cout << itrC << " " << timestep << " Ni: " << sumInfeced << endl;
-        }
-  
-        if (ProduceEventMatix)
-        {
-            for (int itt = 0; itt < Res_TransmitionTrack_table.size(); ++itt)
+
+            if (ProduceEventMatix)
             {
-                //file1 << r << "," << sigma;
-                file1 << itrC2;
-                for (int ittt = 0; ittt < Res_TransmitionTrack_table[0].size(); ittt++)
+                for (int itt = 0; itt < Res_TransmitionTrack_table.size(); ++itt)
                 {
-                    file1 << "," << Res_TransmitionTrack_table[itt][ittt];
+                    //file1 << r << "," << sigma;
+                    file1 << pt1 << "," <<pt2;
+                    for (int ittt = 0; ittt < Res_TransmitionTrack_table[0].size(); ittt++)
+                    {
+                        file1 << "," << Res_TransmitionTrack_table[itt][ittt];
+                    }
+                    file1 << "\n";
                 }
-                file1 << "\n";
             }
-        }
-        for (int itt = 0; itt < Res_timeserie_table.size(); ++itt)
-        {
-            //file2 << r << "," << sigma;
-            file2 << itrC2;
-            for (int ittt = 0; ittt < Res_timeserie_table[0].size(); ittt++)
+            for (int itt = 0; itt < Res_timeserie_table.size(); ++itt)
             {
-                file2 << "," << Res_timeserie_table[itt][ittt];
+                //file2 << r << "," << sigma;
+                file2 << pt1 << "," <<pt2;
+                for (int ittt = 0; ittt < Res_timeserie_table[0].size(); ittt++)
+                {
+                    file2 << "," << Res_timeserie_table[itt][ittt];
+                }
+                file2 << "\n";
             }
-            file2 << "\n";
+
+            Res_timeserie_table.clear();
+            Res_TransmitionTrack_table.clear();
+
+            auto end = chrono::steady_clock::now();
+            auto diff = end - start;
+            cout << "pt1: "<< pt1 << ", pt2: " << pt2 << ", run time: " << chrono::duration<double>(diff).count() << "s" << endl;
         }
-
-        Res_timeserie_table.clear();
-        Res_TransmitionTrack_table.clear();
-
-        auto end = chrono::steady_clock::now();
-        auto diff = end - start;
-        cout << itrC2<<" time: " << chrono::duration<double>(diff).count() << "s" << endl;
     }
-    
-    cout << ProduceEventMatix<<endl;
-    if(ProduceEventMatix){
-        cout <<"checkP 1"<<endl;
+
+    cout << ProduceEventMatix << endl;
+    if (ProduceEventMatix)
+    {
         file1.close();
         cout << "The results stored at: " << Filepath1 << endl;
-    } 
-    cout <<"checkP 2"<<endl;
+    }
     file2.close();
     cout << "The results stored at: " << Filepath2 << endl;
-    
+
     return 0;
 }
 
 void CreateErdosReinyGraph(double p_grph, int NNodes, Vertex Nodes[])
 {
-
     //std::uniform_real_distribution<double> unifreal_dis(0.0,1.0);
     for (int node1 = 0; node1 < NNodes; node1++)
     {
@@ -358,7 +351,7 @@ void MultiStrainSIRonNet(double beta[], double mu[], double sigma[][NStrain], in
                 for (int v : Nodes[i].adjList)
                 {
                     if (Nodes[v].Status_old[k] == 0) //if the target is in Status == S for kth strain:
-                    { 
+                    {
                         double alpha_Ik = 1;
                         for (int kk = 0; kk < NStrain; kk++)
                         {
@@ -368,21 +361,21 @@ void MultiStrainSIRonNet(double beta[], double mu[], double sigma[][NStrain], in
                                 break;
                             }
                         }
-                        int StateIndx_v = 9*Nodes[v].Status_old[0]+3*Nodes[v].Status_old[1]+Nodes[v].Status_old[2];
+                        int StateIndx_v = 9 * Nodes[v].Status_old[0] + 3 * Nodes[v].Status_old[1] + Nodes[v].Status_old[2];
                         double alpha_Rk = 0;
-                        if (StateIndx_v==0)
+                        if (StateIndx_v == 0)
                         {
                             alpha_Rk = 1;
-                        } 
-                        else if (StateIndx_v == 18 || StateIndx_v==8)
+                        }
+                        else if (StateIndx_v == 18 || StateIndx_v == 8)
                         {
                             alpha_Rk = sigma[0][k];
                         }
-                        else if(StateIndx_v == 6 || StateIndx_v==20)
+                        else if (StateIndx_v == 6 || StateIndx_v == 20)
                         {
                             alpha_Rk = sigma[1][k];
                         }
-                        else if(StateIndx_v == 2 || StateIndx_v==24)
+                        else if (StateIndx_v == 2 || StateIndx_v == 24)
                         {
                             alpha_Rk = sigma[2][k];
                         }
@@ -484,7 +477,7 @@ void InitializingSeeds(int NNodes, int Nstrains, int Nseeds[], Vertex Nodes[], c
 void InitializingSeeds2(int NNodes, int Nstrains, int Nseeds[], Vertex Nodes[], const bool ResetNodes)
 {
     std::uniform_int_distribution<int> unifint_dis(0, NNodes);
-    
+
     if (ResetNodes)
     {
         for (int i = 0; i < NNodes; i++)
@@ -500,7 +493,7 @@ void InitializingSeeds2(int NNodes, int Nstrains, int Nseeds[], Vertex Nodes[], 
     }
 
     vector<int> vec;
-   
+
     for (int k = 0; k < Nstrains; k++)
     {
         int Nseedi = Nseeds[k];
@@ -508,7 +501,7 @@ void InitializingSeeds2(int NNodes, int Nstrains, int Nseeds[], Vertex Nodes[], 
         while (n < Nseedi)
         {
             int number = unifint_dis(gen);
-            auto result1 = std::find(begin(vec), end(vec), number);
+            //auto result1 = std::find(begin(vec), end(vec), number);
             double alpha_Ik = 1;
             for (int kk = 0; kk < NStrain; kk++)
             {
@@ -518,15 +511,14 @@ void InitializingSeeds2(int NNodes, int Nstrains, int Nseeds[], Vertex Nodes[], 
                     break;
                 }
             }
-            if (result1 == std::end(vec) && alpha_Ik==1)
-            {   
+            if (/*result1 == std::end(vec) &&*/ alpha_Ik == 1)
+            {
                 Nodes[number].Status[k] = 1;
                 Nodes[number].Status_old[k] = 1;
                 // Status: {S = 0, S = 1, R=2}
-                vec.push_back(number);
+                //vec.push_back(number);
                 n++;
             }
         }
     }
 }
-
