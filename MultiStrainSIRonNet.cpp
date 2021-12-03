@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <filesystem>
 #include <stdio.h> /* input, output, puts, NULL */
 #include <math.h>
 #include <stdlib.h>
@@ -64,7 +65,7 @@ int main()
         {Sigma12, Sigma12, Sigma3},
         {Sigma3, Sigma3, Sigma3}};
 
-    const bool ProduceEventMatix = true;
+    const bool ProduceEventMatix = false;
 
     //==================================================================================================
     //  - Map the States to a decimal number Index.
@@ -139,10 +140,9 @@ int main()
     }
 
     //================Creat Result Files ====================
-    string Path = string(get_current_dir_name());
-
+    string Path = std::filesystem::current_path();
     char FileName1[128];
-    snprintf(FileName1, sizeof(FileName1), "TransmitionTrack_TEST_Rf=%.2f_muf=%.2f_tau=%.2f.csv", R0_1, mu_2, tau);
+    snprintf(FileName1, sizeof(FileName1), "TransmitionTrack_3Strain_R1=%.2f_mu1=%.2f_tau=%.2f.csv", R0_1, mu_1, tau);
     string Filepath1 = Path + "/" + (string)FileName1;
     ofstream file1;
     if (ProduceEventMatix)
@@ -152,7 +152,7 @@ int main()
         file1 << endl;
     }
     char FileName2[128];
-    snprintf(FileName2, sizeof(FileName2), "TimeSerie_TEST_Rf=%.2f_muf=%.2f_tau=%.2f.csv", R0_1, mu_2, tau);
+    snprintf(FileName2, sizeof(FileName2), "TimeSerie_3Strain_R1=%.2f_mu1=%.2f_tau=%.2f.csv", R0_1, mu_1, tau);
     string Filepath2 = Path + "/" + (string)FileName2;
     ofstream file2;
     file2.open(Filepath2);
@@ -175,7 +175,7 @@ int main()
 
     double pt1 = 0.6, pt2 = 0.65;
     int itr = 10;
-    for (double pt1 = 0.6; pt1 < 1.65; pt1 += 0.1)
+    for (double pt1 = 0.6; pt1 < 1.05; pt1 += 0.1)
     {
         for (double pt2 = 0.5; pt2 < 0.64; pt2 += 0.02)
         {
@@ -194,7 +194,25 @@ int main()
                 int flag_emerge3 = 0;
                 int SSS0 = NNode - NofInfc;
                 while (NofInfc > 0 && timestep < 1000)
-                {
+                {   
+                    // Emerge new strains
+                    int SSS1 = State_current[IndxSSS];
+                    if (timestep == 10)                   
+                    {
+                        SSS0 = SSS1;
+                        flag_emerge2 = 1;
+                        int NseedNewVariant[NStrain] = {0, 50, 0};
+                        InitializingSeeds2(NNode, NStrain, NseedNewVariant, Nodes, false);
+                        //cout << timestep << " flag2: " << R0_1 << " " << SSS0 << endl;
+                    }
+                    //if (((double)SSS1 / (double)SSS0) < (1 / (pt2 * R0_12)) && flag_emerge2 == 1 && flag_emerge3 == 0)
+                    if (timestep == 15)
+                    {
+                        flag_emerge3 = 1;
+                        int NseedNewVariant[NStrain] = {0, 0, 50};
+                        InitializingSeeds2(NNode, NStrain, NseedNewVariant, Nodes, false);
+                        //cout << timestep<< " flag3: "<<R0_12<<" "<< SSS1 <<" "<<SSS0<< endl;
+                    }   
 
                     // Compute and recorde the current Status:
                     State_current.assign(State_current.size(), 0);
@@ -251,26 +269,8 @@ int main()
 
                     // Compute the next status and update the current status:
                     MultiStrainSIRonNet(beta, mu, Sigma, NNode, Nodes);
-
-                    // Emerge new strains
-                    int SSS1 = State_current[IndxSSS];
-                    if (((double)SSS1 / (double)SSS0) < (1 / (pt1 * R0_1)) && flag_emerge2 == 0)
-                    {
-                        SSS0 = SSS1;
-                        flag_emerge2 = 1;
-                        int NseedNewVariant[NStrain] = {0, 50, 0};
-                        InitializingSeeds2(NNode, NStrain, NseedNewVariant, Nodes, false);
-                        //cout << timestep << " flag2: " << R0_1 << " " << SSS0 << endl;
-                    }
-                    if (((double)SSS1 / (double)SSS0) < (1 / (pt2 * R0_12)) && flag_emerge2 == 1 && flag_emerge3 == 0)
-                    {
-                        flag_emerge3 = 1;
-                        int NseedNewVariant[NStrain] = {0, 0, 50};
-                        InitializingSeeds2(NNode, NStrain, NseedNewVariant, Nodes, false);
-                        //cout << timestep<< " flag3: "<<R0_12<<" "<< SSS1 <<" "<<SSS0<< endl;
-                    }
+                    
                 }
-                //cout << itrC << " " << timestep << endl;
             }
 
             if (ProduceEventMatix)
@@ -302,7 +302,7 @@ int main()
 
             auto end = chrono::steady_clock::now();
             auto diff = end - start;
-            cout << "pt1: "<< pt1 << ", pt2: " << pt2 << ", run time: " << chrono::duration<double>(diff).count() << "s" << endl;
+            cout << "t1: "<< pt1 << ", t2: " << pt2 << ", run time: " << chrono::duration<double>(diff).count() << "s" << endl;
         }
     }
 
@@ -492,8 +492,6 @@ void InitializingSeeds2(int NNodes, int Nstrains, int Nseeds[], Vertex Nodes[], 
         }
     }
 
-    vector<int> vec;
-
     for (int k = 0; k < Nstrains; k++)
     {
         int Nseedi = Nseeds[k];
@@ -501,22 +499,20 @@ void InitializingSeeds2(int NNodes, int Nstrains, int Nseeds[], Vertex Nodes[], 
         while (n < Nseedi)
         {
             int number = unifint_dis(gen);
-            //auto result1 = std::find(begin(vec), end(vec), number);
             double alpha_Ik = 1;
             for (int kk = 0; kk < NStrain; kk++)
             {
-                if (Nodes[number].Status[kk] == 1)
+                if (Nodes[number].Status[kk] == 1 || Nodes[number].Status_old[kk] == 1)
                 {
                     alpha_Ik = 0;
                     break;
                 }
             }
-            if (/*result1 == std::end(vec) &&*/ alpha_Ik == 1)
+            if (Nodes[number].Status[k] ==0 && alpha_Ik == 1)
             {
                 Nodes[number].Status[k] = 1;
                 Nodes[number].Status_old[k] = 1;
                 // Status: {S = 0, S = 1, R=2}
-                //vec.push_back(number);
                 n++;
             }
         }
