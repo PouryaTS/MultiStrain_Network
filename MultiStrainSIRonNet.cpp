@@ -34,6 +34,7 @@ void CreateErdosReinyGraph(double p_grph, int NNodes, Vertex Nodes[]);
 void InitializingSeeds(int NNodes, int Nstrains, int Nseeds[], Vertex Nodes[], const bool ResetNodes = true);
 void InitializingSeeds2(int NNodes, int Nstrains, int Nseeds[], Vertex Nodes[], const bool ResetNodes = true);
 void MultiStrainSIRonNet(double beta[], double mu[], double sigma[][NStrain], int NNodes, Vertex Nodes[]);
+void MultiStrainSIRonNet(double beta[], double mu[], double sigma[][NStrain], int NNodes,vector <int>& ListofNode, Vertex Nodes[]);
 int MapState2DecimalNumber(int State[], int Nstrains);
 int myPow(int x, int p);
 
@@ -41,30 +42,18 @@ int main()
 {
     char label[] = "SIR";
     int NNode = 10000;
+
     Vertex Nodes[NNode];
+    std::vector<int> ListofNode;
+    for (int i=0; i<NNode; ++i) ListofNode.push_back(i); // 1 2 3 4 5 6 7 8 9
 
     double MeanDeg = 5;
     double p_grph = (double)MeanDeg / (double)NNode; // p = 0.005
     CreateErdosReinyGraph(p_grph, NNode, Nodes);
-
-    double R0_1 = 2, mu_1 = 0.6, tau = 1.5, r2 = 1.8, r3 = 1;
-    double beta_1 = R0_1 * mu_1 / MeanDeg;
-    double mu_2 = mu_1 / tau;
-    double mu_3 = mu_2;
-    double beta_2 = (r2 * R0_1) * mu_2 / MeanDeg;
-    double beta_3 = (r3 * R0_1) * mu_3 / MeanDeg;
-    double R0_12 = MeanDeg * (beta_1 + beta_2) / (mu_1 + mu_2);
+    double R0_1 = 1.1, mu_1 = 1.0/7.0, tau2 = 1,tau3 = 1, r3 = 1;
+    //double r2 = 1.8;
     int Nseeds[NStrain] = {50, 0, 0};
-    double beta[NStrain] = {beta_1, beta_2, beta_3};
-    double mu[NStrain] = {mu_1, mu_2, mu_3};
-
-    double Sigma12 = 0.05;
-    double Sigma3 = 0.5;
-    double Sigma[3][NStrain] = {
-        {Sigma12, Sigma12, Sigma3},
-        {Sigma12, Sigma12, Sigma3},
-        {Sigma3, Sigma3, Sigma3}};
-
+   
     const bool ProduceEventMatix = false;
 
     //==================================================================================================
@@ -127,22 +116,22 @@ int main()
     //==============Header of the Result files ===============
     string HeaderFile1 = "itr,t,node,status_previous,status_current,Infector,status_Infector";
     string HeaderFile2;
-    HeaderFile2 += "pt1, pt2, it, t";
+    HeaderFile2 += "r2,Sigma,t1,t2,it,t";
     for (int it = 0; it < ValidStatus.size(); it++)
     {
-        HeaderFile2 += ", ";
+        HeaderFile2 += ",";
         HeaderFile2 += ("N_" + LabelArray[ValidStatus[it]]);
     }
     for (int it = 0; it < InfectedStatus.size(); it++)
     {
-        HeaderFile2 += ", ";
+        HeaderFile2 += ",";
         HeaderFile2 += ("Inc_" + LabelArray[InfectedStatus[it]]);
     }
 
     //================Creat Result Files ====================
     string Path = std::filesystem::current_path();
     char FileName1[128];
-    snprintf(FileName1, sizeof(FileName1), "TransmitionTrack_3Strain_R1=%.2f_mu1=%.2f_tau=%.2f.csv", R0_1, mu_1, tau);
+    snprintf(FileName1, sizeof(FileName1), "TransmitionTrack_3Strain_R1=%.2f_mu1=%.2f_tau=%.2f.csv", R0_1, mu_1, tau2);
     string Filepath1 = Path + "/" + (string)FileName1;
     ofstream file1;
     if (ProduceEventMatix)
@@ -152,7 +141,7 @@ int main()
         file1 << endl;
     }
     char FileName2[128];
-    snprintf(FileName2, sizeof(FileName2), "TimeSerie_3Strain_R1=%.2f_mu1=%.2f_tau=%.2f.csv", R0_1, mu_1, tau);
+    snprintf(FileName2, sizeof(FileName2), "TimeSerie_3Strain_R1=%.2f_mu1=%.2f_tau=%.2f.csv", R0_1, mu_1, tau2);
     string Filepath2 = Path + "/" + (string)FileName2;
     ofstream file2;
     file2.open(Filepath2);
@@ -173,13 +162,39 @@ int main()
     int IndxSSI = MapStateIndx2ColIndx1[MapState2Index[0][0][1]];
     int IndxRSS = MapStateIndx2ColIndx1[MapState2Index[2][0][0]];
 
-    double pt1 = 0.6, pt2 = 0.65;
-    int itr = 10;
-    for (double pt1 = 0.6; pt1 < 1.05; pt1 += 0.1)
-    {
-        for (double pt2 = 0.5; pt2 < 0.64; pt2 += 0.02)
+    
+    vector<double> rVec;
+    vector<double> sigmaVec;
+    for (double ri = 1.3; ri < 2.01; ri += 0.1){rVec.push_back(ri);}
+    for (double sigmai = 0.0; sigmai < 1.001; sigmai += 0.1){sigmaVec.push_back(sigmai);}
+    
+    for (double r2 : rVec)
+    {       
+        for (double Sigma3 : sigmaVec)
         {
-            auto start = chrono::steady_clock::now();
+    double mu_2 = mu_1 / tau2;
+    double mu_3 = mu_1 / tau3;
+    double beta_1 = R0_1 * mu_1 / MeanDeg;
+    double beta_2 = (r2 * R0_1) * mu_2 / MeanDeg;
+    double beta_3 = (r3 * R0_1) * mu_3 / MeanDeg;
+
+    //double R0_12 = MeanDeg * (beta_1 + beta_2) / (mu_1 + mu_2);
+    double beta[NStrain] = {beta_1, beta_2, beta_3};
+    double mu[NStrain] = {mu_1, mu_2, mu_3};
+    double Sigma12 = 0.05;
+    //ouble Sigma3 = 0.5;
+    double Sigma[3][NStrain] = {
+        {Sigma12, Sigma12, Sigma3},
+        {Sigma12, Sigma12, Sigma3},
+        {Sigma3, Sigma3, Sigma3}};
+    
+    auto start = chrono::steady_clock::now();
+    int itr = 100;
+    for (int t1 = 0; t1 < 30; t1 += 3)
+    {
+        for (int t2 = t1; t2 < (t1+30); t2 += 3)
+        {
+            //auto start = chrono::steady_clock::now();
             for (int itrC = 0; itrC < itr; itrC++)
             {
                 InitializingSeeds2(NNode, NStrain, Nseeds, Nodes, true);
@@ -197,7 +212,7 @@ int main()
                 {   
                     // Emerge new strains
                     int SSS1 = State_current[IndxSSS];
-                    if (timestep == 10)                   
+                    if (timestep == t1 && flag_emerge2 == 0)                   
                     {
                         SSS0 = SSS1;
                         flag_emerge2 = 1;
@@ -206,7 +221,7 @@ int main()
                         //cout << timestep << " flag2: " << R0_1 << " " << SSS0 << endl;
                     }
                     //if (((double)SSS1 / (double)SSS0) < (1 / (pt2 * R0_12)) && flag_emerge2 == 1 && flag_emerge3 == 0)
-                    if (timestep == 15)
+                    if (timestep == t2 && flag_emerge3 == 0)
                     {
                         flag_emerge3 = 1;
                         int NseedNewVariant[NStrain] = {0, 0, 50};
@@ -268,8 +283,7 @@ int main()
                     timestep += 1;
 
                     // Compute the next status and update the current status:
-                    MultiStrainSIRonNet(beta, mu, Sigma, NNode, Nodes);
-                    
+                    MultiStrainSIRonNet(beta, mu, Sigma, NNode, ListofNode, Nodes);
                 }
             }
 
@@ -277,8 +291,8 @@ int main()
             {
                 for (int itt = 0; itt < Res_TransmitionTrack_table.size(); ++itt)
                 {
-                    //file1 << r << "," << sigma;
-                    file1 << pt1 << "," <<pt2;
+                    file1 << r2 << "," << Sigma3<<",";
+                    file1 << t1 << "," <<t2;
                     for (int ittt = 0; ittt < Res_TransmitionTrack_table[0].size(); ittt++)
                     {
                         file1 << "," << Res_TransmitionTrack_table[itt][ittt];
@@ -288,8 +302,8 @@ int main()
             }
             for (int itt = 0; itt < Res_timeserie_table.size(); ++itt)
             {
-                //file2 << r << "," << sigma;
-                file2 << pt1 << "," <<pt2;
+                file2 << r2 << "," << Sigma3<<",";
+                file2 << t1 << "," <<t2;
                 for (int ittt = 0; ittt < Res_timeserie_table[0].size(); ittt++)
                 {
                     file2 << "," << Res_timeserie_table[itt][ittt];
@@ -300,11 +314,18 @@ int main()
             Res_timeserie_table.clear();
             Res_TransmitionTrack_table.clear();
 
-            auto end = chrono::steady_clock::now();
+            /*auto end = chrono::steady_clock::now();
             auto diff = end - start;
-            cout << "t1: "<< pt1 << ", t2: " << pt2 << ", run time: " << chrono::duration<double>(diff).count() << "s" << endl;
+            cout << "t1: "<< t1 << ", t2: " << t2 << ", run time: " << chrono::duration<double>(diff).count() << "s" << endl;*/
         }
     }
+            auto end = chrono::steady_clock::now();
+            auto diff = end - start;
+            cout << "r2: "<< r2 << ", Sigma: " << Sigma3 << ", run time: " << chrono::duration<double>(diff).count() << "s" << endl;
+
+        }
+    }
+
 
     cout << ProduceEventMatix << endl;
     if (ProduceEventMatix)
@@ -336,12 +357,13 @@ void CreateErdosReinyGraph(double p_grph, int NNodes, Vertex Nodes[])
     }
 }
 
-void MultiStrainSIRonNet(double beta[], double mu[], double sigma[][NStrain], int NNodes, Vertex Nodes[])
+void MultiStrainSIRonNet(double beta[], double mu[], double sigma[][NStrain], int NNodes,vector <int>& ListofNode, Vertex Nodes[])
 {
     // beta_k = P(S-->I) for kth starin
     // mu_k = P(I-->R) for kth starin
+    std::random_shuffle(ListofNode.begin(), ListofNode.end());
 
-    for (int i = 0; i < NNodes; i++)
+    for (int i : ListofNode)
     {
         for (int k = 0; k < NStrain; k++)
         {
@@ -421,7 +443,7 @@ int myPow(int x, int p)
 void InitializingSeeds(int NNodes, int Nstrains, int Nseeds[], Vertex Nodes[], const bool ResetNodes)
 {
 
-    std::uniform_int_distribution<int> unifint_dis(0, NNodes);
+    std::uniform_int_distribution<int> unifint_dis(0, (NNodes-1));
 
     vector<int> vec;
     int NseedT = 0;
@@ -476,7 +498,7 @@ void InitializingSeeds(int NNodes, int Nstrains, int Nseeds[], Vertex Nodes[], c
 
 void InitializingSeeds2(int NNodes, int Nstrains, int Nseeds[], Vertex Nodes[], const bool ResetNodes)
 {
-    std::uniform_int_distribution<int> unifint_dis(0, NNodes);
+    std::uniform_int_distribution<int> unifint_dis(0, (NNodes-1));
 
     if (ResetNodes)
     {
