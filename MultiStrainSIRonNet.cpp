@@ -52,7 +52,7 @@ int main()
     CreateErdosReinyGraph(p_grph, NNode, Nodes);
     double R0_1 = 1.1, mu_1 = 1.0/7.0, tau2 = 1,tau3 = 1, r3 = 1;
     //double r2 = 1.8;
-    int Nseeds[NStrain] = {50, 50, 50};
+    int Nseeds[NStrain] = {50, 0, 0};
    
     const bool ProduceEventMatix = false;
 
