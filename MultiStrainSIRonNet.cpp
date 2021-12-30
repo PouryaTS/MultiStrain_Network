@@ -205,7 +205,7 @@ int main()
                     NofInfc = NofInfc + Nseeds[k];
                 }
 
-                int flag_emerge2 = 0;
+                int flag_emerge2 = 1;
                 int flag_emerge3 = 0;
                 int SSS0 = NNode - NofInfc;
                 while (NofInfc > 0 && timestep < 1000)
