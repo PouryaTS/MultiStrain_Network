@@ -199,7 +199,7 @@ int main()
             {
                 InitializingSeeds2(NNode, NStrain, Nseeds, Nodes, true);
                 int timestep = 0;
-                int NofInfc = 0;
+                int NofInfc = 1;
                 for (int k = 0; k < NStrain; k++)
                 {
                     NofInfc = NofInfc + Nseeds[k];
