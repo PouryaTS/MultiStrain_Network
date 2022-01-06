@@ -30,15 +30,15 @@ std::random_device rd;
 std::mt19937 gen(rd());
 std::uniform_real_distribution<double> unifreal_dis(0.0, 1.0);
 
+void CreateNetworkFromEdgeList(string FilePath, Vertex Nodes[]);
 void CreateErdosReinyGraph(double p_grph, int NNodes, Vertex Nodes[]);
 void InitializingSeeds(int NNodes, int Nstrains, int Nseeds[], Vertex Nodes[], const bool ResetNodes = true);
 void InitializingSeeds2(int NNodes, int Nstrains, int Nseeds[], Vertex Nodes[], const bool ResetNodes = true);
-void MultiStrainSIRonNet(double beta[], double mu[], double sigma[][NStrain], int NNodes, Vertex Nodes[]);
 void MultiStrainSIRonNet(double beta[], double mu[], double sigma[][NStrain], int NNodes,vector <int>& ListofNode, Vertex Nodes[]);
 int MapState2DecimalNumber(int State[], int Nstrains);
 int myPow(int x, int p);
 
-int main()
+int main(int argc, char** argv)
 {
     char label[] = "SIR";
     int NNode = 10000;
@@ -50,9 +50,16 @@ int main()
     double MeanDeg = 5;
     double p_grph = (double)MeanDeg / (double)NNode; // p = 0.005
     CreateErdosReinyGraph(p_grph, NNode, Nodes);
-    double R0_1 = 1.1, mu_1 = 1.0/7.0, tau2 = 1,tau3 = 1, r3 = 1;
+    double R0_1 = 1.5, mu_1 = 1.0/7.0, tau2 = 1,tau3 = 1, r3 = 1;
     //double r2 = 1.8;
+    double r2_s = 1.0 , r2_e = 2.0;
+    if (argc > 1) {
+    r2_s = std::atof(argv[1]);
+    r2_e = std::atof(argv[2]);
+    }
+
     int Nseeds[NStrain] = {50, 0, 0};
+
    
     const bool ProduceEventMatix = false;
 
@@ -131,7 +138,7 @@ int main()
     //================Creat Result Files ====================
     string Path = std::filesystem::current_path();
     char FileName1[128];
-    snprintf(FileName1, sizeof(FileName1), "TransmitionTrack_3Strain_R1=%.2f_mu1=%.2f_tau=%.2f.csv", R0_1, mu_1, tau2);
+    snprintf(FileName1, sizeof(FileName1), "TransmitionTrack_3Strain_R1=%.2f_mu1=%.2f_tau=%.2f_r2=%.1f:%0.1f.csv", R0_1, mu_1, tau2, r2_s, r2_e);
     string Filepath1 = Path + "/" + (string)FileName1;
     ofstream file1;
     if (ProduceEventMatix)
@@ -141,7 +148,7 @@ int main()
         file1 << endl;
     }
     char FileName2[128];
-    snprintf(FileName2, sizeof(FileName2), "TimeSerie_3Strain_R1=%.2f_mu1=%.2f_tau=%.2f.csv", R0_1, mu_1, tau2);
+    snprintf(FileName2, sizeof(FileName2), "TimeSerie_3Strain_R1=%.2f_mu1=%.2f_tau=%.2f_r2=%.1f:%0.1f.csv", R0_1, mu_1, tau2, r2_s, r2_e);
     string Filepath2 = Path + "/" + (string)FileName2;
     ofstream file2;
     file2.open(Filepath2);
@@ -165,7 +172,7 @@ int main()
     
     vector<double> rVec;
     vector<double> sigmaVec;
-    for (double ri = 1.3; ri < 2.01; ri += 0.1){rVec.push_back(ri);}
+    for (double ri = r2_s; ri < r2_e; ri += 0.1){rVec.push_back(ri);}
     for (double sigmai = 0.0; sigmai < 1.001; sigmai += 0.1){sigmaVec.push_back(sigmai);}
     
     for (double r2 : rVec)
@@ -190,9 +197,9 @@ int main()
     
     auto start = chrono::steady_clock::now();
     int itr = 100;
-    for (int t1 = 0; t1 < 30; t1 += 3)
+    for (int t1 = 0; t1 < 150; t1 += 15)
     {
-        for (int t2 = t1; t2 < (t1+30); t2 += 3)
+        for (int t2 = t1; t2 < (t1+150); t2 += 15)
         {
             //auto start = chrono::steady_clock::now();
             for (int itrC = 0; itrC < itr; itrC++)
@@ -540,3 +547,34 @@ void InitializingSeeds2(int NNodes, int Nstrains, int Nseeds[], Vertex Nodes[], 
         }
     }
 }
+
+ 
+ void CreateNetworkFromEdgeList(string FilePath, Vertex Nodes[])
+ {
+    std::ifstream infile (FilePath);    // Load the file stream
+    std::string line;                  // A line of values from text
+    std::stringstream splitter;        // Prepare a stringstream as a splitter (splits on spaces) for reading key/values from a line
+
+    // Make sure we can read the stream
+    if (infile) {
+        // As long as there are lines of data, we read the file
+        while (std::getline(infile, line)) {
+            int source, target;
+            splitter << line;           // Load line into splitter
+            //cout << line << endl ;           
+            splitter >> source;         // Read the key back into temporary
+            splitter >> target;         // Read the value back into temporary
+            splitter.clear();           // Clear for next line
+            // Add the edge to the Graph:
+            Nodes[source].adjList.push_back(target);
+            Nodes[target].adjList.push_back(source);
+        
+        }
+    }
+    else {
+        // The file was not found or locked, etc...
+        std::cout << "Unable to open file: " << FilePath << std::endl;
+        exit(1);
+    }
+ }
+    
