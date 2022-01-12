@@ -11,11 +11,12 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <sstream>
 
 using namespace std;
 
 #define NStrain 3
-#define NState (int)pow(3, NStrain)
+#define NState 27
 
 struct Vertex
 {
@@ -45,12 +46,18 @@ int main(int argc, char** argv)
 
     Vertex Nodes[NNode];
     std::vector<int> ListofNode;
-    for (int i=0; i<NNode; ++i) ListofNode.push_back(i); // 1 2 3 4 5 6 7 8 9
-
-    double MeanDeg = 5;
+    for (int i=0; i<NNode; ++i) ListofNode.push_back(i); 
+    /*double MeanDeg = 5;
     double p_grph = (double)MeanDeg / (double)NNode; // p = 0.005
-    CreateErdosReinyGraph(p_grph, NNode, Nodes);
-    double R0_1 = 1.5, mu_1 = 1.0/7.0, tau2 = 1,tau3 = 1, r3 = 1;
+    CreateErdosReinyGraph(p_grph, NNode, Nodes);*/
+    CreateNetworkFromEdgeList("/Users/pourya/Projects/INSERM/MultiStrain_Network/Edgelist_ErdosReiny.csv", Nodes);
+    double MeanDegree = 0; 
+    for (int i = 0; i < NNode; i++)
+    {
+        MeanDegree += Nodes[i].adjList.size();
+    }
+    MeanDegree = MeanDegree / (double)NNode;
+    double R0_1 = 1.0, mu_1 = 1.0/7.0, tau2 = 1,tau3 = 1, r3 = 1;
     //double r2 = 1.8;
     double r2_s = 1.0 , r2_e = 2.0;
     if (argc > 1) {
@@ -58,7 +65,7 @@ int main(int argc, char** argv)
     r2_e = std::atof(argv[2]);
     }
 
-    int Nseeds[NStrain] = {50, 0, 0};
+    int Nseeds[NStrain] = {0, 50, 0};
 
    
     const bool ProduceEventMatix = false;
@@ -148,7 +155,7 @@ int main(int argc, char** argv)
         file1 << endl;
     }
     char FileName2[128];
-    snprintf(FileName2, sizeof(FileName2), "TimeSerie_3Strain_R1=%.2f_mu1=%.2f_tau=%.2f_r2=%.1f:%0.1f.csv", R0_1, mu_1, tau2, r2_s, r2_e);
+    snprintf(FileName2, sizeof(FileName2), "TimeSerie_3Strain_k=%.4f_R1=%.2f_mu1=%.2f_tau=%.2f.csv",MeanDegree, R0_1, mu_1, tau2);
     string Filepath2 = Path + "/" + (string)FileName2;
     ofstream file2;
     file2.open(Filepath2);
@@ -172,8 +179,8 @@ int main(int argc, char** argv)
     
     vector<double> rVec;
     vector<double> sigmaVec;
-    for (double ri = r2_s; ri < r2_e; ri += 0.1){rVec.push_back(ri);}
-    for (double sigmai = 0.0; sigmai < 1.001; sigmai += 0.1){sigmaVec.push_back(sigmai);}
+    for (double ri = r2_s; ri < r2_e; ri += 0.05){rVec.push_back(ri);}
+    for (double sigmai = 0.0; sigmai < 1.001; sigmai += 1.5){sigmaVec.push_back(sigmai);}
     
     for (double r2 : rVec)
     {       
@@ -181,15 +188,15 @@ int main(int argc, char** argv)
         {
     double mu_2 = mu_1 / tau2;
     double mu_3 = mu_1 / tau3;
-    double beta_1 = R0_1 * mu_1 / MeanDeg;
-    double beta_2 = (r2 * R0_1) * mu_2 / MeanDeg;
-    double beta_3 = (r3 * R0_1) * mu_3 / MeanDeg;
+    double beta_1 = R0_1 * mu_1 / MeanDegree;
+    double beta_2 = (r2 * R0_1) * mu_2 / MeanDegree;
+    double beta_3 = (r3 * R0_1) * mu_3 / MeanDegree;
 
     //double R0_12 = MeanDeg * (beta_1 + beta_2) / (mu_1 + mu_2);
     double beta[NStrain] = {beta_1, beta_2, beta_3};
     double mu[NStrain] = {mu_1, mu_2, mu_3};
     double Sigma12 = 0.05;
-    //ouble Sigma3 = 0.5;
+    //double Sigma3 = 0.5;
     double Sigma[3][NStrain] = {
         {Sigma12, Sigma12, Sigma3},
         {Sigma12, Sigma12, Sigma3},
@@ -197,9 +204,9 @@ int main(int argc, char** argv)
     
     auto start = chrono::steady_clock::now();
     int itr = 100;
-    for (int t1 = 0; t1 < 150; t1 += 15)
+    for (int t1 = 0; t1 < 150; t1 += 155)
     {
-        for (int t2 = t1; t2 < (t1+150); t2 += 15)
+        for (int t2 = t1; t2 < (t1+150); t2 += 355)
         {
             //auto start = chrono::steady_clock::now();
             for (int itrC = 0; itrC < itr; itrC++)
@@ -212,8 +219,8 @@ int main(int argc, char** argv)
                     NofInfc = NofInfc + Nseeds[k];
                 }
 
-                int flag_emerge2 = 0;
-                int flag_emerge3 = 0;
+                int flag_emerge2 = 1;
+                int flag_emerge3 = 1;
                 int SSS0 = NNode - NofInfc;
                 while (NofInfc > 0 && timestep < 1000)
                 {   
@@ -368,7 +375,7 @@ void MultiStrainSIRonNet(double beta[], double mu[], double sigma[][NStrain], in
 {
     // beta_k = P(S-->I) for kth starin
     // mu_k = P(I-->R) for kth starin
-    std::random_shuffle(ListofNode.begin(), ListofNode.end());
+    std::shuffle(ListofNode.begin(), ListofNode.end(), gen);
 
     for (int i : ListofNode)
     {
@@ -554,7 +561,7 @@ void InitializingSeeds2(int NNodes, int Nstrains, int Nseeds[], Vertex Nodes[], 
     std::ifstream infile (FilePath);    // Load the file stream
     std::string line;                  // A line of values from text
     std::stringstream splitter;        // Prepare a stringstream as a splitter (splits on spaces) for reading key/values from a line
-
+    
     // Make sure we can read the stream
     if (infile) {
         // As long as there are lines of data, we read the file
