@@ -37,6 +37,8 @@ void InitializingSeeds(int NNodes, int Nstrains, int Nseeds[], Vertex Nodes[], c
 void InitializingSeeds2(int NNodes, int Nstrains, int Nseeds[], Vertex Nodes[], const bool ResetNodes = true);
 void MultiStrainSIRonNet(double beta[], double mu[], double sigma[][NStrain], int NNodes,vector <int>& ListofNode, Vertex Nodes[]);
 int MapState2DecimalNumber(int State[], int Nstrains);
+void ReadParameters(string FilePath,double parameters[]);
+
 int myPow(int x, int p);
 
 int main(int argc, char** argv)
@@ -50,25 +52,54 @@ int main(int argc, char** argv)
     /*double MeanDeg = 5;
     double p_grph = (double)MeanDeg / (double)NNode; // p = 0.005
     CreateErdosReinyGraph(p_grph, NNode, Nodes);*/
-    CreateNetworkFromEdgeList("/Users/pourya/Projects/INSERM/MultiStrain_Network/Edgelist_ErdosReiny.csv", Nodes);
+
+    double beta_1 = 0.04, mu_1 = 1.0/7.0, tau2 = 1,tau3 = 1, r3 = 1;
+    //double r2 = 1.8;
+    double r2_s = 1.0 , r2_e = 1.1, r2_step = 0.1;
+    double sigma3_s = 0, sigma3_e = 1, sigma3_step = 0.5;
+    int t2_s = 0, t2_e = 30, t2_step =30;
+    int t3_s = 0, t3_e = 30, t3_step =30;
+    int I0_1 = 50, I0_2 = 50, I0_3 =50;
+    int itr = 100;
+
+    double parameters[21] = {beta_1,mu_1, r2_s, r2_e, r2_step, tau2, r3, tau3, 
+                    sigma3_s, sigma3_e, sigma3_step, 
+                    (double)t2_s, (double)t2_e, (double)t2_step,
+                    (double)t3_s, (double)t3_e, (double)t3_step,
+                    (double)I0_1, (double)I0_2, (double)I0_3,(double)itr};
+
+    if (argc > 1) {
+    string ConfigFilePath = argv[1];
+    string NetworkFilePath = argv[2];
+    CreateNetworkFromEdgeList(NetworkFilePath, Nodes);
+    // Read parameters from file 
+    ReadParameters(ConfigFilePath, parameters);
+    beta_1 = parameters[0], mu_1 = parameters[1];
+    r2_s = parameters[2] , r2_e = parameters[3], r2_step = parameters[4];
+    tau2 = parameters[5], r3 = parameters[6],tau3 = parameters[7];
+    sigma3_s = parameters[8], sigma3_e = parameters[9], sigma3_step = parameters[10];
+    t2_s = (int)parameters[11], t2_e = (int)parameters[12], t2_step =(int)parameters[13];
+    t3_s = (int)parameters[14], t3_e = (int)parameters[15], t3_step =(int)parameters[16];
+    I0_1 = (int)parameters[17], I0_2 = (int)parameters[18], I0_3 =(int)parameters[19];
+    itr = (int)parameters[20];
+    }
+    
     double MeanDegree = 0; 
     for (int i = 0; i < NNode; i++)
     {
         MeanDegree += Nodes[i].adjList.size();
     }
     MeanDegree = MeanDegree / (double)NNode;
-    double R0_1 = 1.0, mu_1 = 1.0/7.0, tau2 = 1,tau3 = 1, r3 = 1;
-    //double r2 = 1.8;
-    double r2_s = 1.0 , r2_e = 2.0;
-    if (argc > 1) {
-    r2_s = std::atof(argv[1]);
-    r2_e = std::atof(argv[2]);
-    }
 
-    int Nseeds[NStrain] = {0, 50, 0};
-
-   
     const bool ProduceEventMatix = false;
+    
+    cout << "parameters: "<<endl;
+    cout << "beta1= "<<beta_1 <<",  mu1= "<<mu_1<< endl;
+    cout << "r2= "<<r2_s<<":"<<r2_e<<":"<<r2_step<<",  tau2= "<<tau2<< endl;
+    cout << "r3= "<<r3<<",  tau3= "<<tau3<< endl;
+    cout << "sigma3= "<<sigma3_s<<":"<<sigma3_e<<":"<<sigma3_step<< endl;
+    cout << "t2= "<<t2_s<<":"<<t2_e<<":"<<t2_step<<",  t3= "<<t3_s<<":"<<t3_e<<":"<<t3_step<< endl;
+    cout << "Iinit= ["<<I0_1<<", "<<I0_2<<", "<<I0_3<<"]"<<",  itr= " <<itr<<endl;
 
     //==================================================================================================
     //  - Map the States to a decimal number Index.
@@ -128,9 +159,9 @@ int main(int argc, char** argv)
     }
 
     //==============Header of the Result files ===============
-    string HeaderFile1 = "itr,t,node,status_previous,status_current,Infector,status_Infector";
+    string HeaderFile1 = "r2,Sigma,t2,t3,it,t,node,status_previous,status_current,Infector,status_Infector";
     string HeaderFile2;
-    HeaderFile2 += "r2,Sigma,t1,t2,it,t";
+    HeaderFile2 += "r2,Sigma,t2,t3,it,t";
     for (int it = 0; it < ValidStatus.size(); it++)
     {
         HeaderFile2 += ",";
@@ -145,7 +176,7 @@ int main(int argc, char** argv)
     //================Creat Result Files ====================
     string Path = std::filesystem::current_path();
     char FileName1[128];
-    snprintf(FileName1, sizeof(FileName1), "TransmitionTrack_3Strain_R1=%.2f_mu1=%.2f_tau=%.2f_r2=%.1f:%0.1f.csv", R0_1, mu_1, tau2, r2_s, r2_e);
+    snprintf(FileName1, sizeof(FileName1), "TransmitionTrack_3Strain_beta1=%.3f_mu1=%.2f_tau=%.2f_r2=%.1f_%0.1f.csv", beta_1, mu_1, tau2, r2_s, r2_e);
     string Filepath1 = Path + "/" + (string)FileName1;
     ofstream file1;
     if (ProduceEventMatix)
@@ -155,7 +186,7 @@ int main(int argc, char** argv)
         file1 << endl;
     }
     char FileName2[128];
-    snprintf(FileName2, sizeof(FileName2), "TimeSerie_3Strain_k=%.4f_R1=%.2f_mu1=%.2f_tau=%.2f.csv",MeanDegree, R0_1, mu_1, tau2);
+    snprintf(FileName2, sizeof(FileName2), "TimeSerie_3Strain_k=%.4f_beta1=%.3f_mu1=%.2f_tau=%.2f_r2=%.1f_%0.1f.csv",MeanDegree, beta_1, mu_1, tau2,r2_s, r2_e);
     string Filepath2 = Path + "/" + (string)FileName2;
     ofstream file2;
     file2.open(Filepath2);
@@ -179,20 +210,24 @@ int main(int argc, char** argv)
     
     vector<double> rVec;
     vector<double> sigmaVec;
-    for (double ri = r2_s; ri < r2_e; ri += 0.05){rVec.push_back(ri);}
-    for (double sigmai = 0.0; sigmai < 1.001; sigmai += 1.5){sigmaVec.push_back(sigmai);}
-    
+    vector<int> t2Vec;
+    vector<int> t3Vec;
+
+    for (double ri = r2_s; ri < r2_e; ri += 0.1){rVec.push_back(ri);}
+    for (double sigmai = sigma3_s; sigmai <= sigma3_e; sigmai += sigma3_step){sigmaVec.push_back(sigmai);}
+    for (int ti = t2_s; ti < t2_e; ti += t2_step){t2Vec.push_back(ti);}
+    for (int ti = t3_s; ti < t3_e; ti += t3_step){t3Vec.push_back(ti);}
+
     for (double r2 : rVec)
     {       
         for (double Sigma3 : sigmaVec)
         {
     double mu_2 = mu_1 / tau2;
     double mu_3 = mu_1 / tau3;
-    double beta_1 = R0_1 * mu_1 / MeanDegree;
-    double beta_2 = (r2 * R0_1) * mu_2 / MeanDegree;
-    double beta_3 = (r3 * R0_1) * mu_3 / MeanDegree;
+    //double beta_1 = R0_1 * mu_1 / MeanDegree;
+    double beta_2 = (r2/tau2) * beta_1;
+    double beta_3 = (r3/tau3) * beta_1;
 
-    //double R0_12 = MeanDeg * (beta_1 + beta_2) / (mu_1 + mu_2);
     double beta[NStrain] = {beta_1, beta_2, beta_3};
     double mu[NStrain] = {mu_1, mu_2, mu_3};
     double Sigma12 = 0.05;
@@ -203,43 +238,40 @@ int main(int argc, char** argv)
         {Sigma3, Sigma3, Sigma3}};
     
     auto start = chrono::steady_clock::now();
-    int itr = 100;
-    for (int t1 = 0; t1 < 150; t1 += 155)
+ 
+    for (int t2 : t2Vec)
     {
-        for (int t2 = t1; t2 < (t1+150); t2 += 355)
+            for (int t3 : t3Vec)
         {
             //auto start = chrono::steady_clock::now();
             for (int itrC = 0; itrC < itr; itrC++)
-            {
+            {   
+                int Nseeds[NStrain] = {I0_1, 0, 0};
                 InitializingSeeds2(NNode, NStrain, Nseeds, Nodes, true);
                 int timestep = 0;
-                int NofInfc = 0;
-                for (int k = 0; k < NStrain; k++)
-                {
-                    NofInfc = NofInfc + Nseeds[k];
-                }
+                int NofInfc = I0_1 + I0_2 + I0_3;
 
-                int flag_emerge2 = 1;
-                int flag_emerge3 = 1;
-                int SSS0 = NNode - NofInfc;
+                int flag_emerge2 = 0;
+                int flag_emerge3 = 0;
+                //int SSS0 = NNode - NofInfc;
                 while (NofInfc > 0 && timestep < 1000)
                 {   
                     // Emerge new strains
-                    int SSS1 = State_current[IndxSSS];
-                    if (timestep == t1 && flag_emerge2 == 0)                   
+                    //int SSS1 = State_current[IndxSSS];
+                    if (timestep == t2 && flag_emerge2 == 0)                   
                     {
-                        SSS0 = SSS1;
+                        //SSS0 = SSS1;
                         flag_emerge2 = 1;
-                        int NseedNewVariant[NStrain] = {0, 50, 0};
-                        InitializingSeeds2(NNode, NStrain, NseedNewVariant, Nodes, false);
+                        int Nseeds[NStrain] = {0, I0_2, 0};
+                        InitializingSeeds2(NNode, NStrain, Nseeds, Nodes, false);
                         //cout << timestep << " flag2: " << R0_1 << " " << SSS0 << endl;
                     }
                     //if (((double)SSS1 / (double)SSS0) < (1 / (pt2 * R0_12)) && flag_emerge2 == 1 && flag_emerge3 == 0)
-                    if (timestep == t2 && flag_emerge3 == 0)
+                    if (timestep == t3 && flag_emerge3 == 0)
                     {
                         flag_emerge3 = 1;
-                        int NseedNewVariant[NStrain] = {0, 0, 50};
-                        InitializingSeeds2(NNode, NStrain, NseedNewVariant, Nodes, false);
+                        int Nseeds[NStrain] = {0, 0, I0_3};
+                        InitializingSeeds2(NNode, NStrain, Nseeds, Nodes, false);
                         //cout << timestep<< " flag3: "<<R0_12<<" "<< SSS1 <<" "<<SSS0<< endl;
                     }   
 
@@ -306,7 +338,7 @@ int main(int argc, char** argv)
                 for (int itt = 0; itt < Res_TransmitionTrack_table.size(); ++itt)
                 {
                     file1 << r2 << "," << Sigma3<<",";
-                    file1 << t1 << "," <<t2;
+                    file1 << t2 << "," <<t3;
                     for (int ittt = 0; ittt < Res_TransmitionTrack_table[0].size(); ittt++)
                     {
                         file1 << "," << Res_TransmitionTrack_table[itt][ittt];
@@ -317,7 +349,7 @@ int main(int argc, char** argv)
             for (int itt = 0; itt < Res_timeserie_table.size(); ++itt)
             {
                 file2 << r2 << "," << Sigma3<<",";
-                file2 << t1 << "," <<t2;
+                file2 << t2 << "," <<t3;
                 for (int ittt = 0; ittt < Res_timeserie_table[0].size(); ittt++)
                 {
                     file2 << "," << Res_timeserie_table[itt][ittt];
@@ -330,7 +362,7 @@ int main(int argc, char** argv)
 
             /*auto end = chrono::steady_clock::now();
             auto diff = end - start;
-            cout << "t1: "<< t1 << ", t2: " << t2 << ", run time: " << chrono::duration<double>(diff).count() << "s" << endl;*/
+            cout << "t2: "<< t2 << ", t3: " << t3 << ", run time: " << chrono::duration<double>(diff).count() << "s" << endl;*/
         }
     }
             auto end = chrono::steady_clock::now();
@@ -585,3 +617,108 @@ void InitializingSeeds2(int NNodes, int Nstrains, int Nseeds[], Vertex Nodes[], 
     }
  }
     
+void ReadParameters(string FilePath,double parameters[])
+{
+    std::ifstream infile (FilePath);    // Load the file stream
+    std::string line;                  // A line of values from text
+    std::stringstream splitter;        // Prepare a stringstream as a splitter (splits on spaces) for reading key/values from a line
+    
+    // Make sure we can read the stream
+    if (infile) {
+        // As long as there are lines of data, we read the file
+        while (std::getline(infile, line)) {
+            string VariableName ;
+            double tempDoublValue;
+            splitter << line;           // Load line into splitter
+            //cout << line << endl ;           
+            splitter >> VariableName;         // Read the key back into temporary
+           
+            if(VariableName=="beta1"){
+                splitter >> tempDoublValue;   
+                double beta_1 = tempDoublValue ;
+                parameters[0] = beta_1;
+            } else if(VariableName=="mu1"){
+                splitter >> tempDoublValue;   
+                double mu_1 = tempDoublValue ;
+                parameters[1] = mu_1;
+            }else if (VariableName=="r2"){
+                splitter >> tempDoublValue; 
+                double r2_s = tempDoublValue ;
+                splitter >> tempDoublValue; 
+                double r2_e = tempDoublValue ;
+                splitter >> tempDoublValue; 
+                double r2_step = tempDoublValue ;
+                parameters[2] = r2_s;
+                parameters[3] = r2_e;
+                parameters[4] = r2_step;
+            } else if (VariableName=="tau2"){
+                splitter >> tempDoublValue;   
+                double tau2 = tempDoublValue ;
+                parameters[5] = tau2;
+            }else if (VariableName=="r3"){
+                splitter >> tempDoublValue;   
+                double r3 = tempDoublValue ;
+                parameters[6] = r3;
+            } else if (VariableName=="tau3"){
+                splitter >> tempDoublValue;   
+                double tau3 = tempDoublValue ;
+                parameters[7] = tau3;
+            }else if (VariableName=="sigma3"){
+                splitter >> tempDoublValue; 
+                double sigma3_s = tempDoublValue ;
+                splitter >> tempDoublValue; 
+                double sigma3_e = tempDoublValue ;
+                splitter >> tempDoublValue; 
+                double sigma3_step = tempDoublValue ;
+                parameters[8] = sigma3_s;
+                parameters[9] = sigma3_e;
+                parameters[10] = sigma3_step;
+            }else if (VariableName=="t2"){
+                splitter >> tempDoublValue; 
+                double t2_s = tempDoublValue ;
+                splitter >> tempDoublValue; 
+                double t2_e = tempDoublValue ;
+                splitter >> tempDoublValue; 
+                double t2_step = tempDoublValue ;
+                parameters[11] = t2_s;
+                parameters[12] = t2_e;
+                parameters[13] = t2_step;
+            }else if (VariableName=="t3"){
+                splitter >> tempDoublValue; 
+                double t3_s = tempDoublValue ;
+                splitter >> tempDoublValue; 
+                double t3_e = tempDoublValue ;
+                splitter >> tempDoublValue; 
+                double t3_step = tempDoublValue ;
+                parameters[14] = t3_s;
+                parameters[15] = t3_e;
+                parameters[16] = t3_step;
+            }else if (VariableName=="Iinit"){
+                splitter >> tempDoublValue; 
+                double I0_1 = tempDoublValue ;
+                splitter >> tempDoublValue; 
+                double I0_2 = tempDoublValue ;
+                splitter >> tempDoublValue; 
+                double I0_3 = tempDoublValue ;
+                parameters[17] = I0_1;
+                parameters[18] = I0_2;
+                parameters[19] = I0_3;
+            }else if (VariableName=="itr"){
+                splitter >> tempDoublValue; 
+                double itr = tempDoublValue ;
+                parameters[20] = itr;
+            }else {
+                cout<<"Can not read all parameters from the config file. Please enter the parameters with the following keys:" << endl;
+                cout<<"beta1, mu1, r2, tau2, r3, tau3, sigma3, t2, t3, Iinit, itr \n" << endl;
+                break;
+            }
+            splitter.clear();           // Clear for next line   
+        }
+
+    }
+    else {
+        // The file was not found or locked, etc...
+        std::cout << "Unable to open file: " << FilePath << std::endl;
+        exit(1);
+    }
+}
