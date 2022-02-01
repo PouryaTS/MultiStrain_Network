@@ -599,6 +599,7 @@ void InitializingSeeds2(int NNodes, int Nstrains, int Nseeds[], Vertex Nodes[], 
         // As long as there are lines of data, we read the file
         while (std::getline(infile, line)) {
             int source, target;
+            std::stringstream splitter;
             splitter << line;           // Load line into splitter
             //cout << line << endl ;           
             splitter >> source;         // Read the key back into temporary
