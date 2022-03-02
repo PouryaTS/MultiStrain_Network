@@ -1,6 +1,6 @@
 #include <iostream>
 #include <fstream>
-#include <filesystem>
+//#include <filesystem>
 #include <stdio.h> /* input, output, puts, NULL */
 #include <math.h>
 #include <stdlib.h>
@@ -58,16 +58,17 @@ int main(int argc, char** argv)
     double r2_s = 1.0 , r2_e = 1.1, r2_step = 0.1;
     double sigma3_s = 0, sigma3_e = 1, sigma3_step = 0.5;
     int t2_s = 0, t2_e = 30, t2_step =30;
-    int t3_s = 0, t3_e = 30, t3_step =30;
+    int deltat_s = 0, deltat_e = 30, deltat_step =30;
     int I0_1 = 50, I0_2 = 50, I0_3 =50;
     int itr = 100;
 
     double parameters[21] = {beta_1,mu_1, r2_s, r2_e, r2_step, tau2, r3, tau3, 
                     sigma3_s, sigma3_e, sigma3_step, 
                     (double)t2_s, (double)t2_e, (double)t2_step,
-                    (double)t3_s, (double)t3_e, (double)t3_step,
+                    (double)deltat_s, (double)deltat_e, (double)deltat_step,
                     (double)I0_1, (double)I0_2, (double)I0_3,(double)itr};
 
+    string NetworkLabel = "Net";
     if (argc > 1) {
     string ConfigFilePath = argv[1];
     string NetworkFilePath = argv[2];
@@ -79,9 +80,12 @@ int main(int argc, char** argv)
     tau2 = parameters[5], r3 = parameters[6],tau3 = parameters[7];
     sigma3_s = parameters[8], sigma3_e = parameters[9], sigma3_step = parameters[10];
     t2_s = (int)parameters[11], t2_e = (int)parameters[12], t2_step =(int)parameters[13];
-    t3_s = (int)parameters[14], t3_e = (int)parameters[15], t3_step =(int)parameters[16];
+    deltat_s = (int)parameters[14], deltat_e = (int)parameters[15], deltat_step =(int)parameters[16];
     I0_1 = (int)parameters[17], I0_2 = (int)parameters[18], I0_3 =(int)parameters[19];
     itr = (int)parameters[20];
+    if (argc > 2){
+    NetworkLabel =  argv[3];      
+    }
     }
     
     double MeanDegree = 0; 
@@ -98,7 +102,7 @@ int main(int argc, char** argv)
     cout << "r2= "<<r2_s<<":"<<r2_e<<":"<<r2_step<<",  tau2= "<<tau2<< endl;
     cout << "r3= "<<r3<<",  tau3= "<<tau3<< endl;
     cout << "sigma3= "<<sigma3_s<<":"<<sigma3_e<<":"<<sigma3_step<< endl;
-    cout << "t2= "<<t2_s<<":"<<t2_e<<":"<<t2_step<<",  t3= "<<t3_s<<":"<<t3_e<<":"<<t3_step<< endl;
+    cout << "t2= "<<t2_s<<":"<<t2_e<<":"<<t2_step<<",  deltat= "<<deltat_s<<":"<<deltat_e<<":"<<deltat_step<< endl;
     cout << "Iinit= ["<<I0_1<<", "<<I0_2<<", "<<I0_3<<"]"<<",  itr= " <<itr<<endl;
 
     //==================================================================================================
@@ -174,9 +178,13 @@ int main(int argc, char** argv)
     }
 
     //================Creat Result Files ====================
-    string Path = std::filesystem::current_path();
-    char FileName1[128];
-    snprintf(FileName1, sizeof(FileName1), "TransmitionTrack_3Strain_beta1=%.3f_mu1=%.2f_tau=%.2f_r2=%.1f_%0.1f.csv", beta_1, mu_1, tau2, r2_s, r2_e);
+    //string Path = std::filesystem::current_path();
+    char PathC[256];
+    getcwd(PathC, 256);
+    string Path = (string)PathC;
+    char FileName1Suffix[128];
+    snprintf(FileName1Suffix, sizeof(FileName1Suffix), "_beta1=%.3f_mu1=%.2f_tau=%.2f_r2=%.1f_%0.1f.csv", beta_1, mu_1, tau2, r2_s, r2_e);
+    string FileName1 = "TransmitionTrack_3Strain_" + NetworkLabel + (string)FileName1Suffix;
     string Filepath1 = Path + "/" + (string)FileName1;
     ofstream file1;
     if (ProduceEventMatix)
@@ -185,8 +193,9 @@ int main(int argc, char** argv)
         file1 << HeaderFile1;
         file1 << endl;
     }
-    char FileName2[128];
-    snprintf(FileName2, sizeof(FileName2), "TimeSerie_3Strain_k=%.4f_beta1=%.3f_mu1=%.2f_tau=%.2f_r2=%.1f_%0.1f.csv",MeanDegree, beta_1, mu_1, tau2,r2_s, r2_e);
+    char FileName2Suffix[128];
+    snprintf(FileName2Suffix, sizeof(FileName2Suffix), "_k=%.4f_beta1=%.3f_mu1=%.2f_tau=%.2f_r2=%.1f_%0.1f.csv",MeanDegree, beta_1, mu_1, tau2,r2_s, r2_e);
+    string FileName2 = "TimeSerie_3Strain_" + NetworkLabel + (string)FileName2Suffix;
     string Filepath2 = Path + "/" + (string)FileName2;
     ofstream file2;
     file2.open(Filepath2);
@@ -211,12 +220,12 @@ int main(int argc, char** argv)
     vector<double> rVec;
     vector<double> sigmaVec;
     vector<int> t2Vec;
-    vector<int> t3Vec;
+    vector<int> deltatVec;
 
     for (double ri = r2_s; ri < r2_e; ri += 0.1){rVec.push_back(ri);}
     for (double sigmai = sigma3_s; sigmai <= sigma3_e; sigmai += sigma3_step){sigmaVec.push_back(sigmai);}
     for (int ti = t2_s; ti < t2_e; ti += t2_step){t2Vec.push_back(ti);}
-    for (int ti = t3_s; ti < t3_e; ti += t3_step){t3Vec.push_back(ti);}
+    for (int ti = deltat_s; ti < deltat_e; ti += deltat_step){deltatVec.push_back(ti);}
 
     for (double r2 : rVec)
     {       
@@ -241,8 +250,9 @@ int main(int argc, char** argv)
  
     for (int t2 : t2Vec)
     {
-            for (int t3 : t3Vec)
+            for (int deltat : deltatVec)
         {
+            int t3 = t2 + deltat;
             //auto start = chrono::steady_clock::now();
             for (int itrC = 0; itrC < itr; itrC++)
             {   
@@ -684,16 +694,16 @@ void ReadParameters(string FilePath,double parameters[])
                 parameters[11] = t2_s;
                 parameters[12] = t2_e;
                 parameters[13] = t2_step;
-            }else if (VariableName=="t3"){
+            }else if (VariableName=="deltat"){
                 splitter >> tempDoublValue; 
-                double t3_s = tempDoublValue ;
+                double deltat_s = tempDoublValue ;
                 splitter >> tempDoublValue; 
-                double t3_e = tempDoublValue ;
+                double deltat_e = tempDoublValue ;
                 splitter >> tempDoublValue; 
-                double t3_step = tempDoublValue ;
-                parameters[14] = t3_s;
-                parameters[15] = t3_e;
-                parameters[16] = t3_step;
+                double deltat_step = tempDoublValue ;
+                parameters[14] = deltat_s;
+                parameters[15] = deltat_e;
+                parameters[16] = deltat_step;
             }else if (VariableName=="Iinit"){
                 splitter >> tempDoublValue; 
                 double I0_1 = tempDoublValue ;
