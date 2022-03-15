@@ -38,6 +38,7 @@ void InitializingSeeds2(int NNodes, int Nstrains, int Nseeds[], Vertex Nodes[], 
 void MultiStrainSIRonNet(double beta[], double mu[], double sigma[][NStrain], int NNodes,vector <int>& ListofNode, Vertex Nodes[]);
 int MapState2DecimalNumber(int State[], int Nstrains);
 void ReadParameters(string FilePath,double parameters[]);
+void ShuffleStatus(vector <int>& ListofNode, Vertex Nodes[], int NSample);
 
 int myPow(int x, int p);
 
@@ -234,6 +235,7 @@ int main(int argc, char** argv)
     for (int ti = t2_s; ti < t2_e; ti += t2_step){t2Vec.push_back(ti);}
     for (int ti = deltat_s; ti < deltat_e; ti += deltat_step){deltatVec.push_back(ti);}
 
+    int NSampleShuffling = 20000;
     for (double r2 : rVec)
     {       
         for (double Sigma3 : sigmaVec)
@@ -270,6 +272,7 @@ int main(int argc, char** argv)
 
                 int flag_emerge2 = 0;
                 int flag_emerge3 = 0;
+                int flag_shuffled = 0;
                 //int SSS0 = NNode - NofInfc;
                 while (NofInfc > 0 && timestep < 1000)
                 {   
@@ -277,7 +280,11 @@ int main(int argc, char** argv)
                     //int SSS1 = State_current[IndxSSS];
                     if (timestep == t2 && flag_emerge2 == 0)                   
                     {
-                        //SSS0 = SSS1;
+                        if (flag_shuffled == 0 )
+                        {
+                            ShuffleStatus(ListofNode, Nodes, NSampleShuffling);
+                            flag_shuffled = 1;
+                        }
                         flag_emerge2 = 1;
                         int Nseeds[NStrain] = {0, I0_2, 0};
                         InitializingSeeds2(NNode, NStrain, Nseeds, Nodes, false);
@@ -286,6 +293,11 @@ int main(int argc, char** argv)
                     //if (((double)SSS1 / (double)SSS0) < (1 / (pt2 * R0_12)) && flag_emerge2 == 1 && flag_emerge3 == 0)
                     if (timestep == t3 && flag_emerge3 == 0)
                     {
+                        if (flag_shuffled == 0 )
+                        {
+                            ShuffleStatus(ListofNode, Nodes, NSampleShuffling);
+                            flag_shuffled = 1;
+                        }      
                         flag_emerge3 = 1;
                         int Nseeds[NStrain] = {0, 0, I0_3};
                         InitializingSeeds2(NNode, NStrain, Nseeds, Nodes, false);
@@ -612,6 +624,30 @@ void InitializingSeeds2(int NNodes, int Nstrains, int Nseeds[], Vertex Nodes[], 
 }
 
  
+void ShuffleStatus(vector <int>& ListofNode, Vertex Nodes[], int NSample){
+
+    int VecSize = ListofNode.size();
+    std::uniform_int_distribution<int> unifint_dis(0, (VecSize-1));
+
+    for (int i = 0; i < NSample; i++)
+    {
+        int n1 = unifint_dis(gen);
+        int n2 = unifint_dis(gen);
+        for (int k = 0; k < NStrain; k++)
+        {
+            int s1 = Nodes[n1].Status[k] ;
+            int s2 = Nodes[n2].Status[k];
+            Nodes[n1].Status[k] = s2;
+            Nodes[n2].Status[k] = s1;
+            int s_o1 = Nodes[n1].Status_old[k] ;
+            int s_o2 = Nodes[n2].Status_old[k];
+            Nodes[n1].Status_old[k] = s_o2;
+            Nodes[n2].Status_old[k] = s_o1;
+        }
+    }
+}
+
+
  void CreateNetworkFromEdgeList(string FilePath, Vertex Nodes[])
  {
     std::ifstream infile (FilePath);    // Load the file stream
