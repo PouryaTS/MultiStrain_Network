@@ -52,7 +52,8 @@ int main(int argc, char** argv)
     /*double MeanDeg = 5;
     double p_grph = (double)MeanDeg / (double)NNode; // p = 0.005
     CreateErdosReinyGraph(p_grph, NNode, Nodes);*/
-
+    bool ProduceEventMatix = false;
+    
     double beta_1 = 0.04, mu_1 = 1.0/7.0, tau2 = 1,tau3 = 1, r3 = 1;
     //double r2 = 1.8;
     double r2_s = 1.0 , r2_e = 1.1, r2_step = 0.1;
@@ -83,8 +84,15 @@ int main(int argc, char** argv)
     deltat_s = (int)parameters[14], deltat_e = (int)parameters[15], deltat_step =(int)parameters[16];
     I0_1 = (int)parameters[17], I0_2 = (int)parameters[18], I0_3 =(int)parameters[19];
     itr = (int)parameters[20];
-    if (argc > 2){
+    if (argc > 3){
     NetworkLabel =  argv[3];      
+    }
+    if (argc > 4){
+    int Arg4 =  atoi(argv[4]);
+        if (Arg4 == 1)
+        {
+            ProduceEventMatix = true;
+        }    
     }
     }
     
@@ -95,7 +103,6 @@ int main(int argc, char** argv)
     }
     MeanDegree = MeanDegree / (double)NNode;
 
-    const bool ProduceEventMatix = false;
     
     cout << "parameters: "<<endl;
     cout << "beta1= "<<beta_1 <<",  mu1= "<<mu_1<< endl;
@@ -183,7 +190,7 @@ int main(int argc, char** argv)
     getcwd(PathC, 256);
     string Path = (string)PathC;
     char FileName1Suffix[128];
-    snprintf(FileName1Suffix, sizeof(FileName1Suffix), "_beta1=%.3f_mu1=%.2f_tau=%.2f_r2=%.1f_%0.1f.csv", beta_1, mu_1, tau2, r2_s, r2_e);
+    snprintf(FileName1Suffix, sizeof(FileName1Suffix), "_k=%.4f_beta1=%.3f_mu1=%.2f_tau=%.2f_r2=%.1f_%0.1f.csv", MeanDegree,beta_1, mu_1, tau2, r2_s, r2_e);
     string FileName1 = "TransmitionTrack_3Strain_" + NetworkLabel + (string)FileName1Suffix;
     string Filepath1 = Path + "/" + (string)FileName1;
     ofstream file1;
@@ -222,7 +229,7 @@ int main(int argc, char** argv)
     vector<int> t2Vec;
     vector<int> deltatVec;
 
-    for (double ri = r2_s; ri < r2_e; ri += 0.1){rVec.push_back(ri);}
+    for (double ri = r2_s; ri < r2_e; ri += r2_step){rVec.push_back(ri);}
     for (double sigmai = sigma3_s; sigmai <= sigma3_e; sigmai += sigma3_step){sigmaVec.push_back(sigmai);}
     for (int ti = t2_s; ti < t2_e; ti += t2_step){t2Vec.push_back(ti);}
     for (int ti = deltat_s; ti < deltat_e; ti += deltat_step){deltatVec.push_back(ti);}
@@ -304,10 +311,17 @@ int main(int argc, char** argv)
                             }
                         }
                         bool existsI = (alpha_Ik == 0);
-                        if (StatusChange && existsI)
+                        if ((StatusChange && existsI) || (timestep == 0 && existsI) )
                         {
                             int Infector = Nodes[i].Infector;
-                            int Status_Infctor = MapState2Index[Nodes[Infector].Status_old[0]][Nodes[Infector].Status_old[1]][Nodes[Infector].Status_old[2]];
+                            int Status_Infctor;
+                            if (Infector != -1){
+                            Status_Infctor = MapState2Index[Nodes[Infector].Status_old[0]][Nodes[Infector].Status_old[1]][Nodes[Infector].Status_old[2]];
+                             }
+                            else{
+                            Status_Infctor = -1;    
+                            }
+                             
                             // Recording the transmition track
                             if (ProduceEventMatix)
                             {
@@ -590,7 +604,7 @@ void InitializingSeeds2(int NNodes, int Nstrains, int Nseeds[], Vertex Nodes[], 
             {
                 Nodes[number].Status[k] = 1;
                 Nodes[number].Status_old[k] = 1;
-                // Status: {S = 0, S = 1, R=2}
+                // Status: {S = 0, I = 1, R=2}
                 n++;
             }
         }
