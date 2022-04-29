@@ -31,6 +31,7 @@ std::uniform_real_distribution<double> unifreal_dis(0.0, 1.0);
 
 void CreateNetworkFromEdgeList(string FilePath, Vertex Nodes[]);
 void CreateErdosReinyGraph(double p_grph, int NNodes, Vertex Nodes[]);
+void SIRonNet(double beta, double mu, int NNodes,vector <int>& ListofNode, Vertex Nodes[]);
 void ReadParameters(string FilePath,double parameters[]);
 double mean(const std::vector<double> &v);
 double sd(const std::vector<double> &v);
@@ -100,7 +101,7 @@ int main(int argc, char** argv)
     file1 << endl;
     //========================================================
     //===========Creat Containers to store resuls=============
-    std::vector<int> NofInfectedBynode_ItrVec(itr, 0);
+    std::vector<double> NofInfectedBynode_ItrVec(itr, 0);
     std::vector<std::array<double, 2>> R0nodeMeanSd_table;
     //========================================================
    
@@ -118,11 +119,23 @@ int main(int argc, char** argv)
         {
             std::vector<std::array<double, 2>> R0nodeMeanSd_table;
             std::vector<int> ListofNode_sh = ListofNode;
+            std::vector<int> ListofNodetoComputeR0;
+
             std::shuffle(ListofNode_sh.begin(), ListofNode_sh.end(), gen);
-            
-            for (int ni = 0; i < NNodetoComputeR0; ni++)
+            int nii = 0;
+            while (ListofNodetoComputeR0.size() < NNodetoComputeR0)
             {
-                int node = ListofNode_sh[ni];
+                int nodei = ListofNode_sh[nii];
+                if ((Nodes[nodei].adjList.size())>0){
+                    ListofNodetoComputeR0.push_back(nodei);
+                }
+                nii+=1;
+                // cout<<nii <<' '<< Nodes[nodei].adjList.size()<<endl;
+            }
+            
+            for (int ni = 0; ni < NNodetoComputeR0; ni++)
+            {
+                int node = ListofNodetoComputeR0[ni];
                 //auto start = chrono::steady_clock::now();
                 for (int itrC = 0; itrC < itr; itrC++)
                 {   
@@ -150,6 +163,7 @@ int main(int argc, char** argv)
                         // Compute the next status and update the current status:
                         SIRonNet(beta, mu, NNode, ListofNode, Nodes);
                     }
+                    
                     for (int v : Nodes[node].adjList)
                     {
                         if(Nodes[v].Infector == node)
@@ -157,18 +171,21 @@ int main(int argc, char** argv)
                             NofInfectedBynode +=1;
                         }
                     }
-                    NofInfectedBynode_ItrVec[itrC] = NofInfectedBynode
+                    NofInfectedBynode_ItrVec[itrC] = NofInfectedBynode;
+                    
+                    
                 }
-
+                
                 R0nodeMeanSd_table.push_back({mean(NofInfectedBynode_ItrVec),sd(NofInfectedBynode_ItrVec)});
                 NofInfectedBynode_ItrVec.assign(NofInfectedBynode_ItrVec.size(),0);
-    
+          
+
             }
         
             for (int itt = 0; itt < R0nodeMeanSd_table.size(); ++itt)
             {
                 file1 << beta << "," << mu<<",";
-                file1 << ListofNode_sh[itt] ;
+                file1 << ListofNodetoComputeR0[itt] ;
                 for (int ittt = 0; ittt < R0nodeMeanSd_table[0].size(); ittt++)
                 {
                     file1 << "," << R0nodeMeanSd_table[itt][ittt];
@@ -176,6 +193,7 @@ int main(int argc, char** argv)
                 file1 << "\n";
             } 
             R0nodeMeanSd_table.clear();
+            ListofNodetoComputeR0.clear();
             
         }
     
@@ -210,7 +228,7 @@ void CreateErdosReinyGraph(double p_grph, int NNodes, Vertex Nodes[])
     }
 }
 
-void SIRonNet(double beta[], double mu[], int NNodes,vector <int>& ListofNode, Vertex Nodes[])
+void SIRonNet(double beta, double mu, int NNodes,vector <int>& ListofNode, Vertex Nodes[])
 {
     // beta_k = P(S-->I) for kth starin
     // mu_k = P(I-->R) for kth starin
