@@ -55,7 +55,7 @@ int main(int argc, char** argv)
     CreateErdosReinyGraph(p_grph, NNode, Nodes);*/
     bool ProduceEventMatix = false;
     
-    double beta_1 = 0.04, mu_1 = 1.0/7.0, tau2 = 1,tau3 = 1, r3 = 1;
+    double beta_1 = 0.04, mu_1 = 1.0/7.0, tau2 = 1,tau3 = 1, r3 = 1, sigma2 = 0.05;
     //double r2 = 1.8;
     double r2_s = 1.0 , r2_e = 1.1, r2_step = 0.1;
     double sigma3_s = 0, sigma3_e = 1, sigma3_step = 0.5;
@@ -64,7 +64,7 @@ int main(int argc, char** argv)
     int I0_1 = 50, I0_2 = 50, I0_3 =50;
     int itr = 100;
 
-    double parameters[21] = {beta_1,mu_1, r2_s, r2_e, r2_step, tau2, r3, tau3, 
+    double parameters[22] = {beta_1,mu_1, r2_s, r2_e, r2_step, tau2, r3, tau3,sigma2, 
                     sigma3_s, sigma3_e, sigma3_step, 
                     (double)t2_s, (double)t2_e, (double)t2_step,
                     (double)deltat_s, (double)deltat_e, (double)deltat_step,
@@ -79,12 +79,12 @@ int main(int argc, char** argv)
     ReadParameters(ConfigFilePath, parameters);
     beta_1 = parameters[0], mu_1 = parameters[1];
     r2_s = parameters[2] , r2_e = parameters[3], r2_step = parameters[4];
-    tau2 = parameters[5], r3 = parameters[6],tau3 = parameters[7];
-    sigma3_s = parameters[8], sigma3_e = parameters[9], sigma3_step = parameters[10];
-    t2_s = (int)parameters[11], t2_e = (int)parameters[12], t2_step =(int)parameters[13];
-    deltat_s = (int)parameters[14], deltat_e = (int)parameters[15], deltat_step =(int)parameters[16];
-    I0_1 = (int)parameters[17], I0_2 = (int)parameters[18], I0_3 =(int)parameters[19];
-    itr = (int)parameters[20];
+    tau2 = parameters[5], r3 = parameters[6],tau3 = parameters[7],sigma2 = parameters[8];
+    sigma3_s = parameters[9], sigma3_e = parameters[10], sigma3_step = parameters[11];
+    t2_s = (int)parameters[12], t2_e = (int)parameters[13], t2_step =(int)parameters[14];
+    deltat_s = (int)parameters[15], deltat_e = (int)parameters[16], deltat_step =(int)parameters[17];
+    I0_1 = (int)parameters[18], I0_2 = (int)parameters[19], I0_3 =(int)parameters[20];
+    itr = (int)parameters[21];
     if (argc > 3){
     NetworkLabel =  argv[3];      
     }
@@ -108,6 +108,7 @@ int main(int argc, char** argv)
     cout << "parameters: "<<endl;
     cout << "beta1= "<<beta_1 <<",  mu1= "<<mu_1<< endl;
     cout << "r2= "<<r2_s<<":"<<r2_e<<":"<<r2_step<<",  tau2= "<<tau2<< endl;
+    cout << "sigma2= "<<sigma2<< endl;
     cout << "r3= "<<r3<<",  tau3= "<<tau3<< endl;
     cout << "sigma3= "<<sigma3_s<<":"<<sigma3_e<<":"<<sigma3_step<< endl;
     cout << "t2= "<<t2_s<<":"<<t2_e<<":"<<t2_step<<",  deltat= "<<deltat_s<<":"<<deltat_e<<":"<<deltat_step<< endl;
@@ -248,7 +249,7 @@ int main(int argc, char** argv)
 
     double beta[NStrain] = {beta_1, beta_2, beta_3};
     double mu[NStrain] = {mu_1, mu_2, mu_3};
-    double Sigma12 = 0.05;
+    double Sigma12 = sigma2;
     //double Sigma3 = 0.5;
     double Sigma[3][NStrain] = {
         {Sigma12, Sigma12, Sigma3},
@@ -271,8 +272,8 @@ int main(int argc, char** argv)
                 int NofInfc = I0_1 + I0_2 + I0_3;
 
                 int flag_emerge2 = 0;
-                int flag_emerge3 = 0;
-                int flag_shuffled = 0;
+                int flag_emerge3 = 1;
+                int flag_shuffled = 1;
                 //int SSS0 = NNode - NofInfc;
                 while (NofInfc > 0 && timestep < 1000)
                 {   
@@ -724,6 +725,10 @@ void ReadParameters(string FilePath,double parameters[])
                 splitter >> tempDoublValue;   
                 double tau3 = tempDoublValue ;
                 parameters[7] = tau3;
+            }else if (VariableName=="sigma2"){
+                splitter >> tempDoublValue;   
+                double sigma2 = tempDoublValue ;
+                parameters[8] = sigma2;
             }else if (VariableName=="sigma3"){
                 splitter >> tempDoublValue; 
                 double sigma3_s = tempDoublValue ;
@@ -731,9 +736,9 @@ void ReadParameters(string FilePath,double parameters[])
                 double sigma3_e = tempDoublValue ;
                 splitter >> tempDoublValue; 
                 double sigma3_step = tempDoublValue ;
-                parameters[8] = sigma3_s;
-                parameters[9] = sigma3_e;
-                parameters[10] = sigma3_step;
+                parameters[9] = sigma3_s;
+                parameters[10] = sigma3_e;
+                parameters[11] = sigma3_step;
             }else if (VariableName=="t2"){
                 splitter >> tempDoublValue; 
                 double t2_s = tempDoublValue ;
@@ -741,9 +746,9 @@ void ReadParameters(string FilePath,double parameters[])
                 double t2_e = tempDoublValue ;
                 splitter >> tempDoublValue; 
                 double t2_step = tempDoublValue ;
-                parameters[11] = t2_s;
-                parameters[12] = t2_e;
-                parameters[13] = t2_step;
+                parameters[12] = t2_s;
+                parameters[13] = t2_e;
+                parameters[14] = t2_step;
             }else if (VariableName=="deltat"){
                 splitter >> tempDoublValue; 
                 double deltat_s = tempDoublValue ;
@@ -751,9 +756,9 @@ void ReadParameters(string FilePath,double parameters[])
                 double deltat_e = tempDoublValue ;
                 splitter >> tempDoublValue; 
                 double deltat_step = tempDoublValue ;
-                parameters[14] = deltat_s;
-                parameters[15] = deltat_e;
-                parameters[16] = deltat_step;
+                parameters[15] = deltat_s;
+                parameters[16] = deltat_e;
+                parameters[17] = deltat_step;
             }else if (VariableName=="Iinit"){
                 splitter >> tempDoublValue; 
                 double I0_1 = tempDoublValue ;
@@ -761,13 +766,13 @@ void ReadParameters(string FilePath,double parameters[])
                 double I0_2 = tempDoublValue ;
                 splitter >> tempDoublValue; 
                 double I0_3 = tempDoublValue ;
-                parameters[17] = I0_1;
-                parameters[18] = I0_2;
-                parameters[19] = I0_3;
+                parameters[18] = I0_1;
+                parameters[19] = I0_2;
+                parameters[20] = I0_3;
             }else if (VariableName=="itr"){
                 splitter >> tempDoublValue; 
                 double itr = tempDoublValue ;
-                parameters[20] = itr;
+                parameters[21] = itr;
             }else {
                 cout<<"Can not read all parameters from the config file. Please enter the parameters with the following keys:" << endl;
                 cout<<"beta1, mu1, r2, tau2, r3, tau3, sigma3, t2, t3, Iinit, itr \n" << endl;
