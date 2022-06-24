@@ -59,14 +59,16 @@ int main(int argc, char** argv)
     //double r2 = 1.8;
     double r2_s = 1.0 , r2_e = 1.1, r2_step = 0.1;
     double sigma3_s = 0, sigma3_e = 1, sigma3_step = 0.5;
-    int t2_s = 0, t2_e = 30, t2_step =30;
+    // int t2_s = 0, t2_e = 30, t2_step =30;
+    double r1t2_s =0, r1t2_e =0.3, r1t2_step=1;
     int deltat_s = 0, deltat_e = 30, deltat_step =30;
     int I0_1 = 50, I0_2 = 50, I0_3 =50;
     int itr = 100;
 
     double parameters[22] = {beta_1,mu_1, r2_s, r2_e, r2_step, tau2, r3, tau3,sigma2, 
                     sigma3_s, sigma3_e, sigma3_step, 
-                    (double)t2_s, (double)t2_e, (double)t2_step,
+                    // (double)t2_s, (double)t2_e, (double)t2_step,
+                    r1t2_s =0, r1t2_e =0.3, r1t2_step=1,
                     (double)deltat_s, (double)deltat_e, (double)deltat_step,
                     (double)I0_1, (double)I0_2, (double)I0_3,(double)itr};
 
@@ -81,7 +83,8 @@ int main(int argc, char** argv)
     r2_s = parameters[2] , r2_e = parameters[3], r2_step = parameters[4];
     tau2 = parameters[5], r3 = parameters[6],tau3 = parameters[7],sigma2 = parameters[8];
     sigma3_s = parameters[9], sigma3_e = parameters[10], sigma3_step = parameters[11];
-    t2_s = (int)parameters[12], t2_e = (int)parameters[13], t2_step =(int)parameters[14];
+    // t2_s = (int)parameters[12], t2_e = (int)parameters[13], t2_step =(int)parameters[14];
+    r1t2_s = parameters[12], r1t2_e = parameters[13], r1t2_step = parameters[14];
     deltat_s = (int)parameters[15], deltat_e = (int)parameters[16], deltat_step =(int)parameters[17];
     I0_1 = (int)parameters[18], I0_2 = (int)parameters[19], I0_3 =(int)parameters[20];
     itr = (int)parameters[21];
@@ -105,14 +108,15 @@ int main(int argc, char** argv)
     MeanDegree = MeanDegree / (double)NNode;
 
     
-    cout << "parameters: "<<endl;
-    cout << "beta1= "<<beta_1 <<",  mu1= "<<mu_1<< endl;
-    cout << "r2= "<<r2_s<<":"<<r2_e<<":"<<r2_step<<",  tau2= "<<tau2<< endl;
-    cout << "sigma2= "<<sigma2<< endl;
-    cout << "r3= "<<r3<<",  tau3= "<<tau3<< endl;
-    cout << "sigma3= "<<sigma3_s<<":"<<sigma3_e<<":"<<sigma3_step<< endl;
-    cout << "t2= "<<t2_s<<":"<<t2_e<<":"<<t2_step<<",  deltat= "<<deltat_s<<":"<<deltat_e<<":"<<deltat_step<< endl;
-    cout << "Iinit= ["<<I0_1<<", "<<I0_2<<", "<<I0_3<<"]"<<",  itr= " <<itr<<endl;
+    std::cout << "parameters: "<<endl;
+    std::cout << "beta1= "<<beta_1 <<",  mu1= "<<mu_1<< endl;
+    std::cout << "r2= "<<r2_s<<":"<<r2_e<<":"<<r2_step<<",  tau2= "<<tau2<< endl;
+    std::cout << "sigma2= "<<sigma2<< endl;
+    std::cout << "r3= "<<r3<<",  tau3= "<<tau3<< endl;
+    std::cout << "sigma3= "<<sigma3_s<<":"<<sigma3_e<<":"<<sigma3_step<< endl;
+    // cout << "t2= "<<t2_s<<":"<<t2_e<<":"<<t2_step<<",  deltat= "<<deltat_s<<":"<<deltat_e<<":"<<deltat_step<< endl;
+    std::cout << "R1t2= "<<r1t2_s<<":"<<r1t2_e<<":"<<r1t2_step<<",  deltat= "<<deltat_s<<":"<<deltat_e<<":"<<deltat_step<< endl;
+    std::cout << "Iinit= ["<<I0_1<<", "<<I0_2<<", "<<I0_3<<"]"<<",  itr= " <<itr<<endl;
 
     //==================================================================================================
     //  - Map the States to a decimal number Index.
@@ -172,9 +176,11 @@ int main(int argc, char** argv)
     }
 
     //==============Header of the Result files ===============
-    string HeaderFile1 = "r2,Sigma,t2,t3,it,t,node,status_previous,status_current,Infector,status_Infector";
+    // string HeaderFile1 = "r2,Sigma,t2,t3,it,t,node,status_previous,status_current,Infector,status_Infector";
+    string HeaderFile1 = "r2,Sigma,R1t2,deltat,it,t,node,status_previous,status_current,Infector,status_Infector";
     string HeaderFile2;
-    HeaderFile2 += "r2,Sigma,t2,t3,it,t";
+    // HeaderFile2 += "r2,Sigma,t2,t3,it,t";
+    HeaderFile2 += "r2,Sigma,R1t2,deltat,it,t";
     for (int it = 0; it < ValidStatus.size(); it++)
     {
         HeaderFile2 += ",";
@@ -193,7 +199,7 @@ int main(int argc, char** argv)
     string Path = (string)PathC;
     char FileName1Suffix[128];
     snprintf(FileName1Suffix, sizeof(FileName1Suffix), "_k=%.4f_beta1=%.3f_mu1=%.2f_tau=%.2f_r2=%.1f_%0.1f.csv", MeanDegree,beta_1, mu_1, tau2, r2_s, r2_e);
-    string FileName1 = "TransmitionTrack_3Strain_" + NetworkLabel + (string)FileName1Suffix;
+    string FileName1 = "TransmitionTrack_" + NetworkLabel + (string)FileName1Suffix;
     string Filepath1 = Path + "/" + (string)FileName1;
     ofstream file1;
     if (ProduceEventMatix)
@@ -204,7 +210,7 @@ int main(int argc, char** argv)
     }
     char FileName2Suffix[128];
     snprintf(FileName2Suffix, sizeof(FileName2Suffix), "_k=%.4f_beta1=%.3f_mu1=%.2f_tau=%.2f_r2=%.1f_%0.1f.csv",MeanDegree, beta_1, mu_1, tau2,r2_s, r2_e);
-    string FileName2 = "TimeSerie_3Strain_" + NetworkLabel + (string)FileName2Suffix;
+    string FileName2 = "TimeSerie_" + NetworkLabel + (string)FileName2Suffix;
     string Filepath2 = Path + "/" + (string)FileName2;
     ofstream file2;
     file2.open(Filepath2);
@@ -224,16 +230,25 @@ int main(int argc, char** argv)
     int IndxSIS = MapStateIndx2ColIndx1[MapState2Index[0][1][0]];
     int IndxSSI = MapStateIndx2ColIndx1[MapState2Index[0][0][1]];
     int IndxRSS = MapStateIndx2ColIndx1[MapState2Index[2][0][0]];
+    int IndxRIS = MapStateIndx2ColIndx1[MapState2Index[2][1][0]];
+    int IndxRSI = MapStateIndx2ColIndx1[MapState2Index[2][0][1]];
+    int IndxRRS = MapStateIndx2ColIndx1[MapState2Index[2][2][0]];
+    int IndxRRI = MapStateIndx2ColIndx1[MapState2Index[2][2][1]];
+    int IndxRSR = MapStateIndx2ColIndx1[MapState2Index[2][0][2]];
+    int IndxRIR = MapStateIndx2ColIndx1[MapState2Index[2][1][2]];
+    int IndxRRR = MapStateIndx2ColIndx1[MapState2Index[2][2][2]];
 
     
     vector<double> rVec;
     vector<double> sigmaVec;
-    vector<int> t2Vec;
+    // vector<int> t2Vec;
+    vector<double> R1t2Vec;
     vector<int> deltatVec;
 
     for (double ri = r2_s; ri < r2_e; ri += r2_step){rVec.push_back(ri);}
     for (double sigmai = sigma3_s; sigmai <= sigma3_e; sigmai += sigma3_step){sigmaVec.push_back(sigmai);}
-    for (int ti = t2_s; ti < t2_e; ti += t2_step){t2Vec.push_back(ti);}
+    // for (int ti = t2_s; ti < t2_e; ti += t2_step){t2Vec.push_back(ti);}
+    for (double r1t2i = r1t2_s; r1t2i < r1t2_e; r1t2i += r1t2_step){R1t2Vec.push_back(r1t2i);}
     for (int ti = deltat_s; ti < deltat_e; ti += deltat_step){deltatVec.push_back(ti);}
 
     int NSampleShuffling = 20000;
@@ -258,11 +273,12 @@ int main(int argc, char** argv)
     
     auto start = chrono::steady_clock::now();
  
-    for (int t2 : t2Vec)
+    // for (int t2 : t2Vec)
+    for (double R1t2 : R1t2Vec)
     {
             for (int deltat : deltatVec)
         {
-            int t3 = t2 + deltat;
+            // int t3 = t2 + deltat;
             //auto start = chrono::steady_clock::now();
             for (int itrC = 0; itrC < itr; itrC++)
             {   
@@ -270,16 +286,20 @@ int main(int argc, char** argv)
                 InitializingSeeds2(NNode, NStrain, Nseeds, Nodes, true);
                 int timestep = 0;
                 int NofInfc = I0_1 + I0_2 + I0_3;
-
+                int N_R1 = 0;
+                double P_R1 = 0.0;
+                int t2 = 0;
+                int t3 = t2 + deltat;
                 int flag_emerge2 = 0;
-                int flag_emerge3 = 1;
+                int flag_emerge3 = 0;
                 int flag_shuffled = 1;
                 //int SSS0 = NNode - NofInfc;
                 while (NofInfc > 0 && timestep < 1000)
                 {   
                     // Emerge new strains
                     //int SSS1 = State_current[IndxSSS];
-                    if (timestep == t2 && flag_emerge2 == 0)                   
+                    // if (timestep == t2 && flag_emerge2 == 0)  
+                    if (P_R1 >= R1t2 && flag_emerge2 == 0)                   
                     {
                         if (flag_shuffled == 0 )
                         {
@@ -287,12 +307,15 @@ int main(int argc, char** argv)
                             flag_shuffled = 1;
                         }
                         flag_emerge2 = 1;
+                        t2 = timestep;
                         int Nseeds[NStrain] = {0, I0_2, 0};
                         InitializingSeeds2(NNode, NStrain, Nseeds, Nodes, false);
                         //cout << timestep << " flag2: " << R0_1 << " " << SSS0 << endl;
                     }
                     //if (((double)SSS1 / (double)SSS0) < (1 / (pt2 * R0_12)) && flag_emerge2 == 1 && flag_emerge3 == 0)
-                    if (timestep == t3 && flag_emerge3 == 0)
+                    // if (timestep == t3 && flag_emerge3 == 0)
+                    t3 = t2 + deltat;
+                    if (P_R1 >= R1t2 && timestep == t3 && flag_emerge3 == 0)
                     {
                         if (flag_shuffled == 0 )
                         {
@@ -300,6 +323,7 @@ int main(int argc, char** argv)
                             flag_shuffled = 1;
                         }      
                         flag_emerge3 = 1;
+                        t3 = timestep;
                         int Nseeds[NStrain] = {0, 0, I0_3};
                         InitializingSeeds2(NNode, NStrain, Nseeds, Nodes, false);
                         //cout << timestep<< " flag3: "<<R0_12<<" "<< SSS1 <<" "<<SSS0<< endl;
@@ -363,10 +387,15 @@ int main(int argc, char** argv)
                     {
                         NofInfc += State_current[MapStateIndx2ColIndx1[s]];
                     }
+                     
+                    N_R1 = State_current[IndxRSS]+State_current[IndxRIS]+State_current[IndxRSI]+State_current[IndxRRS]+State_current[IndxRRI]+State_current[IndxRSR]+State_current[IndxRIR]+State_current[IndxRRR];
+                    P_R1 = (double)N_R1 / (double)NNode; 
                     timestep += 1;
-
                     // Compute the next status and update the current status:
                     MultiStrainSIRonNet(beta, mu, Sigma, NNode, ListofNode, Nodes);
+                    
+                    // cout << (double)N_R1<<',';
+
                 }
             }
 
@@ -375,7 +404,8 @@ int main(int argc, char** argv)
                 for (int itt = 0; itt < Res_TransmitionTrack_table.size(); ++itt)
                 {
                     file1 << r2 << "," << Sigma3<<",";
-                    file1 << t2 << "," <<t3;
+                    // file1 << t2 << "," <<t3;
+                    file1 << R1t2 << "," <<deltat;
                     for (int ittt = 0; ittt < Res_TransmitionTrack_table[0].size(); ittt++)
                     {
                         file1 << "," << Res_TransmitionTrack_table[itt][ittt];
@@ -386,7 +416,8 @@ int main(int argc, char** argv)
             for (int itt = 0; itt < Res_timeserie_table.size(); ++itt)
             {
                 file2 << r2 << "," << Sigma3<<",";
-                file2 << t2 << "," <<t3;
+                // file2 << t2 << "," <<t3;
+                file2 << R1t2 << "," <<deltat;
                 for (int ittt = 0; ittt < Res_timeserie_table[0].size(); ittt++)
                 {
                     file2 << "," << Res_timeserie_table[itt][ittt];
@@ -739,16 +770,26 @@ void ReadParameters(string FilePath,double parameters[])
                 parameters[9] = sigma3_s;
                 parameters[10] = sigma3_e;
                 parameters[11] = sigma3_step;
-            }else if (VariableName=="t2"){
+            }else if (VariableName=="R1t2"){
                 splitter >> tempDoublValue; 
-                double t2_s = tempDoublValue ;
+                double r1t2_s = tempDoublValue ;
                 splitter >> tempDoublValue; 
-                double t2_e = tempDoublValue ;
+                double r1t2_e = tempDoublValue ;
                 splitter >> tempDoublValue; 
-                double t2_step = tempDoublValue ;
-                parameters[12] = t2_s;
-                parameters[13] = t2_e;
-                parameters[14] = t2_step;
+                double r1t2_step = tempDoublValue ;
+                parameters[12] = r1t2_s;
+                parameters[13] = r1t2_e;
+                parameters[14] = r1t2_step;
+            // }else if (VariableName=="t2"){
+                // splitter >> tempDoublValue; 
+                // double t2_s = tempDoublValue ;
+                // splitter >> tempDoublValue; 
+                // double t2_e = tempDoublValue ;
+                // splitter >> tempDoublValue; 
+                // double t2_step = tempDoublValue ;
+                // parameters[12] = t2_s;
+                // parameters[13] = t2_e;
+                // parameters[14] = t2_step;
             }else if (VariableName=="deltat"){
                 splitter >> tempDoublValue; 
                 double deltat_s = tempDoublValue ;
