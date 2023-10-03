@@ -320,6 +320,16 @@ int main(int argc, char** argv)
                 int flag_emerge2 = 0;
                 int flag_emerge3 = 0;
                 int flag_shuffled = 1;
+                
+                // std::array<int, 3> SelEdgeToTrack = EdgeListToShuffle[0];
+                // cout<<SelEdgeToTrack[0]<<"-"<<SelEdgeToTrack[1]<<" ("<<SelEdgeToTrack[2]<<")"<<"\n";
+                // cout <<"t= "<<timestep<<": ";
+                // for (int v : Nodes[SelEdgeToTrack[0]].adjList)
+                // {
+                //     cout <<v<<", ";
+                // }
+                // cout<<endl;
+                
                 //int SSS0 = NNode - NofInfc;
                 while (NofInfc > 0 && timestep < 1000)
                 {   
@@ -425,20 +435,30 @@ int main(int argc, char** argv)
                         // ShufflingEdges(p_ShuffleEdge, EdgeListType2 ,NNode, Nodes ,Nodes_org);
                         // ShufflingEdges(1, EdgeListToShuffle ,NNode, Nodes ,Nodes_org);
                         ShufflingEdges2(1, EdgeListToShuffle , Nodes);
-                    }  
-                    // cout << (double)N_R1<<',';
+                    } 
+
+                // cout <<"t= "<<timestep<<": ";
+                // for (int v : Nodes[SelEdgeToTrack[0]].adjList)
+                // {
+                //     cout << v<<", ";
+                // } 
+                // cout << endl;
+                    
+                  
                 }
                 // reseting the network to the orginal one and selecting a new set of random link (this part is for the second method of shuffling links)
                 // 
-                EdgeListToShuffle.clear();
-                random_sample(EdgeListType2.begin(), EdgeListType2.end(), NEdgetoSuffle);
-                for (size_t ei = 0; ei < NEdgetoSuffle; ei++)
+                if (p_ShuffleEdge>0)
                 {
-                    EdgeListToShuffle.push_back(EdgeListType2[ei]);
-                };
-                for (size_t nodei = 0; nodei < NNode; nodei++){
-                    Nodes[nodei].adjList = Nodes_org[nodei].adjList;
-                };
+                    EdgeListToShuffle.clear();
+                    random_sample(EdgeListType2.begin(), EdgeListType2.end(), NEdgetoSuffle);
+                    for (size_t ei = 0; ei < NEdgetoSuffle; ei++){
+                        EdgeListToShuffle.push_back(EdgeListType2[ei]);
+                    };
+                    for (size_t nodei = 0; nodei < NNode; nodei++){
+                        Nodes[nodei].adjList = Nodes_org[nodei].adjList;
+                    };
+                }
 
 
             }
