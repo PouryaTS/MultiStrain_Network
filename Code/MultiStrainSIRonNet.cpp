@@ -71,16 +71,19 @@ int main(int argc, char** argv)
     double r1t2_s =0, r1t2_e =0.3, r1t2_step=1;
     int deltat_s = 0, deltat_e = 30, deltat_step =30;
     int I0_1 = 50, I0_2 = 50, I0_3 =50;
+    double pd_1 = 0, pd_2 = 0, pd_3 =0;
+    double p_dynseed[NStrain] = {pd_1,pd_2,pd_3};
     double p_ShuffleEdge = 0;
     int itr = 100;
     
 
-    double parameters[23] = {beta_1,mu_1, r2_s, r2_e, r2_step, tau2, r3, tau3,sigma2, 
+    double parameters[26] = {beta_1,mu_1, r2_s, r2_e, r2_step, tau2, r3, tau3,sigma2, 
                     sigma3_s, sigma3_e, sigma3_step, 
                     // (double)t2_s, (double)t2_e, (double)t2_step,
                     r1t2_s =0, r1t2_e =0.3, r1t2_step=1,
                     (double)deltat_s, (double)deltat_e, (double)deltat_step,
-                    (double)I0_1, (double)I0_2, (double)I0_3,(double)p_ShuffleEdge,(double)itr};
+                    (double)I0_1, (double)I0_2, (double)I0_3,(double)pd_1,(double)pd_2,(double)pd_3,
+                    (double)p_ShuffleEdge,(double)itr};
 
     string NetworkLabel = "Net";
     if (argc > 1) {
@@ -97,8 +100,9 @@ int main(int argc, char** argv)
         r1t2_s = parameters[12], r1t2_e = parameters[13], r1t2_step = parameters[14];
         deltat_s = (int)parameters[15], deltat_e = (int)parameters[16], deltat_step =(int)parameters[17];
         I0_1 = (int)parameters[18], I0_2 = (int)parameters[19], I0_3 =(int)parameters[20];
-        p_ShuffleEdge = parameters[21];
-        itr = (int)parameters[22];
+        pd_1 = parameters[21], pd_2 = parameters[22], pd_3 =parameters[23];
+        p_ShuffleEdge = parameters[24];
+        itr = (int)parameters[25];
         if (argc > 3){
         NetworkLabel =  argv[3];      
         }
@@ -110,7 +114,7 @@ int main(int argc, char** argv)
             }    
         }
     }
-    
+    p_dynseed[0]=pd_1, p_dynseed[1]=pd_2, p_dynseed[2]=pd_3;
     double MeanDegree = 0; 
     for (int i = 0; i < NNode; i++)
     {
@@ -121,7 +125,17 @@ int main(int argc, char** argv)
     for (size_t i = 0; i < NNode; i++){
         Nodes_org[i] = Nodes[i];    
         };
+    
+    double sum_p = 0;
+    for (size_t i = 0; i < NStrain; i++)
+    {
+        sum_p += p_dynseed[i];
+    }
 
+    bool dynseed_do = (sum_p > 0);
+
+    
+    
     std::cout << "parameters: "<<endl;
     std::cout << "beta1= "<<beta_1 <<",  mu1= "<<mu_1<< endl;
     std::cout << "r2= "<<r2_s<<":"<<r2_e<<":"<<r2_step<<",  tau2= "<<tau2<< endl;
@@ -130,7 +144,8 @@ int main(int argc, char** argv)
     std::cout << "sigma3= "<<sigma3_s<<":"<<sigma3_e<<":"<<sigma3_step<< endl;
     // cout << "t2= "<<t2_s<<":"<<t2_e<<":"<<t2_step<<",  deltat= "<<deltat_s<<":"<<deltat_e<<":"<<deltat_step<< endl;
     std::cout << "R1t2= "<<r1t2_s<<":"<<r1t2_e<<":"<<r1t2_step<<",  deltat= "<<deltat_s<<":"<<deltat_e<<":"<<deltat_step<< endl;
-    std::cout << "Iinit= ["<<I0_1<<", "<<I0_2<<", "<<I0_3<<"]"<<", p_ShuffleEdge= "<<p_ShuffleEdge<<",  itr= " <<itr<<endl;
+    std::cout << "Iinit= ["<<I0_1<<", "<<I0_2<<", "<<I0_3<<"]"<< ", p_dynSeed= ["<<p_dynseed[0]<<", "<<p_dynseed[1]<<", "<<p_dynseed[2]<<"]"<<endl;
+    std::cout << "p_ShuffleEdge= "<<p_ShuffleEdge<<",  itr= " <<itr<<endl;
 
     //==================================================================================================
     //  - Map the States to a decimal number Index.
@@ -310,15 +325,19 @@ int main(int argc, char** argv)
             for (int itrC = 0; itrC < itr; itrC++)
             {   
                 int Nseeds[NStrain] = {I0_1, 0, 0};
+                int flag_emerge[NStrain] = {0,0,0};
                 InitializingSeeds2(NNode, NStrain, Nseeds, Nodes, true);
+                //int flag_emerge2 = 0;
+                //int flag_emerge3 = 0;
+                flag_emerge[0] = 1;
+                flag_emerge[1] = 0;
+                flag_emerge[2] = 0;
                 int timestep = 0;
                 int NofInfc = I0_1 + I0_2 + I0_3;
                 int N_R1 = 0;
                 double P_R1 = 0.0;
                 int t2 = 0;
                 int t3 = t2 + deltat;
-                int flag_emerge2 = 0;
-                int flag_emerge3 = 0;
                 int flag_shuffled = 1;
                 
                 // std::array<int, 3> SelEdgeToTrack = EdgeListToShuffle[0];
@@ -336,14 +355,14 @@ int main(int argc, char** argv)
                     // Emerge new strains
                     //int SSS1 = State_current[IndxSSS];
                     // if (timestep == t2 && flag_emerge2 == 0)  
-                    if (P_R1 >= R1t2 && flag_emerge2 == 0)                   
+                    if (P_R1 >= R1t2 && flag_emerge[1] == 0)                   
                     {
                         if (flag_shuffled == 0 )
                         {
                             ShuffleStatus(ListofNode, Nodes, NSampleShuffling);
                             flag_shuffled = 1;
                         }
-                        flag_emerge2 = 1;
+                        flag_emerge[1] = 1;
                         t2 = timestep;
                         int Nseeds[NStrain] = {0, I0_2, 0};
                         InitializingSeeds2(NNode, NStrain, Nseeds, Nodes, false);
@@ -352,14 +371,14 @@ int main(int argc, char** argv)
                     //if (((double)SSS1 / (double)SSS0) < (1 / (pt2 * R0_12)) && flag_emerge2 == 1 && flag_emerge3 == 0)
                     // if (timestep == t3 && flag_emerge3 == 0)
                     t3 = t2 + deltat;
-                    if (P_R1 >= R1t2 && timestep == t3 && flag_emerge3 == 0)
+                    if (P_R1 >= R1t2 && timestep == t3 && flag_emerge[2] == 0)
                     {
                         if (flag_shuffled == 0 )
                         {
                             ShuffleStatus(ListofNode, Nodes, NSampleShuffling);
                             flag_shuffled = 1;
                         }      
-                        flag_emerge3 = 1;
+                        flag_emerge[2] = 1;
                         t3 = timestep;
                         int Nseeds[NStrain] = {0, 0, I0_3};
                         InitializingSeeds2(NNode, NStrain, Nseeds, Nodes, false);
@@ -385,7 +404,7 @@ int main(int argc, char** argv)
                             }
                         }
                         bool existsI = (alpha_Ik == 0);
-                        if ((StatusChange && existsI) || (timestep == 0 && existsI) )
+                        if ((StatusChange && existsI) )//|| (timestep == 0 && existsI) )
                         {
                             int Infector = Nodes[i].Infector;
                             int Status_Infctor;
@@ -405,6 +424,68 @@ int main(int argc, char** argv)
                             int Ind2 = MapStateIndx2ColIndx2[Status_n];
                             State_current[Ind2] += 1;
                         }
+                        // Dynamical seeding part : infect susceptible nodes with the probability sigma*p_dynamicalseeding 
+                        if (dynseed_do)
+                        {
+                            int alpha_Ik_old = 1;
+                            for (int kk = 0; kk < NStrain; kk++)
+                            {
+                                if (Nodes[i].Status_old[kk] == 1)
+                                {
+                                    alpha_Ik_old = 0;
+                                    break;
+                                }
+                            }
+                            bool existsI_old = (alpha_Ik_old == 0);
+                            // we consider that borh statuses new and old not to be I.
+                            // If we consider just the status new not to be I, then it is possible to have a transition I -> R that may not be recorded. 
+                            if ((!existsI)&&(!existsI_old)) //
+                            {
+                                for (int kk = 0; kk < NStrain; kk++)
+                                {
+                                    if (flag_emerge[kk] ==1)
+                                    {
+                                        double alpha_Rk = 0;
+                                        if (Status_n == 0)
+                                        {
+                                            alpha_Rk = 1;
+                                        }  
+                                        else if (Status_n == 18 || Status_n == 8)
+                                        {
+                                            alpha_Rk = Sigma[0][kk];
+                                        }
+                                        else if (Status_n == 6 || Status_n == 20)
+                                        {
+                                            alpha_Rk = Sigma[1][kk];
+                                        }
+                                        else if (Status_n == 2 || Status_n == 24)
+                                        {
+                                            alpha_Rk = Sigma[2][kk];
+                                        }
+
+                                        double p_spEmrg = alpha_Ik * alpha_Rk * p_dynseed[kk];
+                                        double r1 = unifreal_dis(gen);
+                                        if (r1 < p_spEmrg)
+                                        {
+                                            Nodes[i].Status[kk] = 1; //Status = I for kth strain
+                                            Nodes[i].Infector = -1;
+                                            Status_o = Status_n;    
+                                            Status_n = MapState2Index[Nodes[i].Status[0]][Nodes[i].Status[1]][Nodes[i].Status[2]];
+                                            
+                                            if (ProduceEventMatix)
+                                            {
+                                                Res_TransmitionTrack = {itrC, timestep, i, Status_o, Status_n, -1, -1};
+                                                Res_TransmitionTrack_table.push_back(Res_TransmitionTrack);
+                                            }
+                                            int Ind2 = MapStateIndx2ColIndx2[Status_n];
+                                            State_current[Ind2] += 1;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
                         int Ind1 = MapStateIndx2ColIndx1[Status_n];
                         State_current[Ind1] += 1;
                     }
@@ -711,7 +792,7 @@ void InitializingSeeds2(int NNodes, int Nstrains, int Nseeds[], Vertex Nodes[], 
             if (Nodes[number].Status[k] ==0 && alpha_Ik == 1)
             {
                 Nodes[number].Status[k] = 1;
-                Nodes[number].Status_old[k] = 1;
+                // Nodes[number].Status_old[k] = 1;
                 // Status: {S = 0, I = 1, R=2}
                 n++;
             }
@@ -719,7 +800,7 @@ void InitializingSeeds2(int NNodes, int Nstrains, int Nseeds[], Vertex Nodes[], 
     }
 }
 
- 
+
 void ShuffleStatus(vector <int>& ListofNode, Vertex Nodes[], int NSample){
 
     int VecSize = ListofNode.size();
@@ -985,17 +1066,27 @@ void ReadParameters(string FilePath,double parameters[])
                 parameters[18] = I0_1;
                 parameters[19] = I0_2;
                 parameters[20] = I0_3;
+            }else if (VariableName=="p_dynamicalseed"){
+                splitter >> tempDoublValue; 
+                double pd_1 = tempDoublValue ;
+                splitter >> tempDoublValue; 
+                double pd_2 = tempDoublValue ;
+                splitter >> tempDoublValue; 
+                double pd_3 = tempDoublValue ;
+                parameters[21] = pd_1;
+                parameters[22] = pd_2;
+                parameters[23] = pd_3;
             }else if (VariableName=="p_ShuffleEdge"){
                 splitter >> tempDoublValue; 
                 double p_ShuffleEdge = tempDoublValue ;
-                parameters[21] = p_ShuffleEdge;
+                parameters[24] = p_ShuffleEdge;
             }else if (VariableName=="itr"){
                 splitter >> tempDoublValue; 
                 double itr = tempDoublValue ;
-                parameters[22] = itr;
+                parameters[25] = itr;
             }else {
                 std::cout<<"Can not read all parameters from the config file. Please enter the parameters with the following keys:" << endl;
-                std::cout<<"beta1, mu1, r2, tau2, r3, tau3, sigma3, R1t2, deltat, Iinit, p_ShuffleEdge, itr \n" << endl;
+                std::cout<<"beta1, mu1, r2, tau2, r3, tau3, sigma3, R1t2, deltat, Iinit,p_dynamicalseed, p_ShuffleEdge, itr \n" << endl;
                 break;
             }
             splitter.clear();           // Clear for next line   
