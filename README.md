@@ -17,6 +17,13 @@ The main parameters of the model are:
 
 
 ### How to use
-To run the executable file, you need to have a configuration file indicating the parameters of the model and a CSV edge list file of the network, and you need to indicate a label for naming the output file. 
+To run the executable, you need:
+
+*	A configuration file specifying the model parameters,
+*	A CSV edge list file describing the network,
+*	A label that will be used to name the output files
+
+ On Linux, you can execute the program as follows:
+ 
 `./MultiStrainSIRonNet.exe $path_to_configuration_file $path_to_network_edgelist_file $OutputFileLabel`
 
