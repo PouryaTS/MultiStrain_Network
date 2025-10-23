@@ -111,3 +111,20 @@ For example, `N_ISR` represents the number of individuals infected with strain 1
 * The total population at each time step is the sum of all `N_*` compartments.
 * Depending on the model configuration, not all compartments may be populated if certain strains are absent or transmission is suppressed.
 
+
+### Compute selection coefficient 
+
+To estimate the **selection coefficient** of the second variant in a two-strain scenario, you can use the Python script `ComputeSelCoeffFittingFreq.py`. 
+
+This script calculates the selection coefficient from the raw simulation data by **fitting a logistic function** to the frequency trajectory of the second strain.
+
+#### Usage
+
+Run the script as follows:
+
+```bash
+python ComputeSelCoeffFittingFreq_r_betaChuncked.py $Dir
+```
+Where `$Dir` is the path to the folder containing the CSV files of the raw simulation outputs.
+
+
