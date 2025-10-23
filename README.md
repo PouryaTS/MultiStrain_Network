@@ -71,3 +71,42 @@ The meaning of each parameter is explained in the following table:
 
 * This example of a configuration file is designed for a 2-strain scenario where there is no third strain. You can modify these parameters to explore different epidemic scenarios.
 
+### 📊 Model Output: CSV File Structure
+The output of each simulation is stored in a **CSV file**, where each row corresponds to one time step for a specific parameter combination (`r2`, `sigma3`, `R1t2`, `deltat`, and `it`).
+
+Below is a sample of the output file:
+
+| r2  | Sigma | R1t2 | deltat | it | t | N_SSS | N_SSI | N_SSR | N_SIS | N_SIR | N_SRS | N_SRI | N_SRR | N_ISS | N_ISR | N_IRS | N_IRR | N_RSS | N_RSI | N_RSR | N_RIS | N_RIR | N_RRS | N_RRI | N_RRR | Inc_SSI | Inc_SIS | Inc_SIR | Inc_SRI |
+|------|--------|-------|---------|----|----|--------|--------|--------|--------|--------|--------|--------|--------|--------|--------|--------|--------|--------|--------|--------|--------|--------|--------|--------|--------|----------|----------|----------|----------|
+| 1.25 | 0 | 0 | 0 | 0 | 0 | 9900 | 0 | 0 | 50 | 0 | 0 | 0 | 0 | 50 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 50 | 0 | 0 |
+| 1.25 | 0 | 0 | 0 | 0 | 1 | 9881 | 0 | 0 | 58 | 0 | 5 | 0 | 0 | 46 | 0 | 0 | 0 | 10 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 13 | 0 | 0 |
+| 1.25 | 0 | 0 | 0 | 0 | 2 | 9846 | 0 | 0 | 71 | 0 | 13 | 0 | 0 | 55 | 0 | 0 | 0 | 15 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 21 | 0 | 0 |
+
+Where:
+
+* Columns `r2`, `Sigma`, `R1t2`, `deltat` indicate the model parameters used for this run (see the configuration file section).
+* Column `it` indicates the index of the stochastic iteration (ranging from 0 to itr - 1).
+* Column `t` represents the time step in the simulation.
+* `N_*` columns indicate the population counts for each compartment defined by the infection status with respect to each of the three strains.
+* `Inc_*` columns represent the incidence in each corresponding compartment — that is, the number of new entries into that compartment during the current time step.
+
+
+
+Since the model includes three strains, each individual can be in one of three states for each strain:
+* S = Susceptible
+* I = Infected
+* R = Recovered
+
+Each compartment name follows the pattern: `N_XYZ`. Where:
+
+- X → status with respect to strain 1
+- Y → status with respect to strain 2
+- Z → status with respect to strain 3
+
+For example, `N_ISR` represents the number of individuals infected with strain 1, susceptible to strain 2, and recovered from strain 3. And `Inc_ISR` represents new individuals entering the `N_ISR` compartment.
+
+**💡 Notes:**
+
+* The total population at each time step is the sum of all `N_*` compartments.
+* Depending on the model configuration, not all compartments may be populated if certain strains are absent or transmission is suppressed.
+
