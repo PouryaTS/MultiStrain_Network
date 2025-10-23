@@ -84,7 +84,7 @@ Below is a sample of the output file:
 
 Where:
 
-* Columns `r2`, `Sigma`, `R1t2`, `deltat` indicate the model parameters used for this run (see the configuration file section).
+* Columns `r2`, `Sigma`, `R1t2`, `deltat` represents $$r_2$$,  $$\sigma_3$$, $$R_1(t_2)$$, and $$\delta t$$, respectively.
 * Column `it` indicates the index of the stochastic iteration (ranging from 0 to itr - 1).
 * Column `t` represents the time step in the simulation.
 * `N_*` columns indicate the population counts for each compartment defined by the infection status with respect to each of the three strains.
