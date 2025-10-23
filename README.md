@@ -22,12 +22,13 @@ To run the executable, you need:
 
 *	A configuration file specifying the model parameters,
 *	A CSV edge list file describing the network,
-*	A label that will be used to name the output files
+*	A label that will be used to name the output files (optional)
 
  On Linux, you can execute the program as follows:
  
-`./MultiStrainSIRonNet.exe $path_to_configuration_file $path_to_network_edgelist_file $OutputFileLabel`
-
+```code
+./MultiStrainSIRonNet.exe $path_to_configuration_file $path_to_network_edgelist_file $OutputFileLabel
+```
 ### 🧩 Configuration file
 
 Below is an example of a configuration file (`ModelConfig_2strains.txt`) used to set the model parameters.
@@ -66,7 +67,7 @@ The meaning of each parameter is explained in the following table:
 
 **💡 Notes:**
 
-* Parameters with three numbers (like r2, sigma3, R1t2, deltat) represent vectors:
+* Parameters with three numbers (like `r2`, `sigma3`, `R1t2`, `deltat`) represent vectors:
 [start, end, step]. The program iterates through all values in that range.
 
 * This example of a configuration file is designed for a 2-strain scenario where there is no third strain. You can modify these parameters to explore different epidemic scenarios.
@@ -84,8 +85,8 @@ Below is a sample of the output file:
 
 Where:
 
-* Columns `r2`, `Sigma`, `R1t2`, `deltat` represents $$r_2$$,  $$\sigma_3$$, $$R_1(t_2)$$, and $$\delta t$$, respectively.
-* Column `it` indicates the index of the stochastic iteration (ranging from 0 to itr - 1).
+* Columns `r2`, `Sigma`, `R1t2`, `deltat` represent $$r_2$$,  $$\sigma_3$$, $$R_1(t_2)$$, and $$\delta t$$, respectively.
+* Column `it` indicates the index of the stochastic iteration (ranging from `0` to `itr - 1`).
 * Column `t` represents the time step in the simulation.
 * `N_*` columns indicate the population counts for each compartment defined by the infection status with respect to each of the three strains.
 * `Inc_*` columns represent the incidence in each corresponding compartment — that is, the number of new entries into that compartment during the current time step.
