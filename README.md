@@ -9,8 +9,8 @@ The main parameters of the model are:
 |$$N$$            | Number of nodes          |
 |$$\mu_1$$, $$\mu_2$$, $$\mu_3$$        |Recovery rate (inverse of the infectious period) for the first, second, and third strain.             | 
 |$$\beta_1$$, $$\beta_2$$, $$\beta_3$$       |Transmission rate for the first, second and third strain       |
-|$$\tau_2$$, $$\tau_3$$        |Scaling factor of the recovery rate of the second and third strain with respect to the first strain. $$\mu_2=\frac{\mu_1}{\tau_2}$$, $$\mu_3=\frac{\mu_1}{\tau_3}$$  | 
-|$$r_2$$, $$r_3$$     |Ratio of transmission rate of the second and third strain with respect to the first strain. $$\beta_2=r_2 \beta_1$$, $$\beta_3=r_3 \beta_1$$  |  
+|$$\tau_2$$, $$\tau_3$$        |Scaling factor of the recovery rate of the second and third strain with respect to the first strain ( $$\mu_2=\frac{\mu_1}{\tau_2}$$, $$\mu_3=\frac{\mu_1}{\tau_3}$$ ). | 
+|$$r_2$$, $$r_3$$     |Ratio of transmission rate of the second and third strain with respect to the first strain ($$\beta_2=r_2 \beta_1$$, $$\beta_3=r_3 \beta_1$$).  |  
 |$$\sigma_2$$      |Cross-immunity between the second variant and the first variant (it is a number between 0 and 1, $\sigma_2=0$ is full cross-immunity, and $\sigma_2=1$ corresponds to no cross-immunity).| 
 |$$\sigma_3$$      |Cross-immunity between the third variant and the first and second variants (it is a number between 0 and 1, $\sigma_3=0$ is full cross-immunity, and $\sigma_3=1$ corresponds to no cross-immunity).|  
 |$$R_1(t_2)$$      |Immunity level of the first variant (cumulative number of the infected) when the second variant is introduced into the population. | 
