@@ -70,7 +70,7 @@ The meaning of each parameter is explained in the following table:
 * Parameters with three numbers (like `r2`, `sigma3`, `R1t2`, `deltat`) represent vectors:
 [start, end, step]. The program iterates through all values in that range.
 
-* This example of a configuration file is designed for a 2-strain scenario where there is no third strain. You can modify these parameters to explore different epidemic scenarios.
+* This example of a configuration file is designed for a **2-strain scenario** where there is no third strain. You can modify these parameters to explore different epidemic scenarios.
 
 ### 📊 Model Output: CSV File Structure
 The output of each simulation is stored in a **CSV file**, where each row corresponds to one time step for a specific parameter combination (`r2`, `sigma3`, `R1t2`, `deltat`, and `it`).
@@ -114,7 +114,7 @@ For example, `N_ISR` represents the number of individuals infected with strain 1
 
 ### Compute selection coefficient 
 
-To estimate the **selection coefficient** of the second variant in a two-strain scenario, you can use the Python script `ComputeSelCoeffFittingFreq.py`. 
+To estimate the **selection coefficient** of the second variant in a **two-strain scenario**, you can use the Python script `ComputeSelCoeffFittingFreq.py`. 
 
 This script calculates the selection coefficient from the raw simulation data by **fitting a logistic function** to the frequency trajectory of the second strain.
 
@@ -123,7 +123,7 @@ This script calculates the selection coefficient from the raw simulation data by
 Run the script as follows:
 
 ```bash
-python ComputeSelCoeffFittingFreq_r_betaChuncked.py $Dir
+python ComputeSelCoeffFittingFreq.py $Dir
 ```
 Where `$Dir` is the path to the folder containing the CSV files of the raw simulation outputs.
 
