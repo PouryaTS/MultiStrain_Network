@@ -1,5 +1,7 @@
 # Multi-strain competition on network structure
-This repository provides the source code for the following study: Pourya Toranj Simin, Juliana Taube, Elisabeta Vergu, Shweta Bansal, Lulla Opatowski, Chiara Poletto. "Contact structure and population immunity shape the selective advantage of emerging variants"
+This repository provides the source code and date for the following study: Pourya Toranj Simin, Juliana Taube, Elisabeta Vergu, Shweta Bansal, Lulla Opatowski, Chiara Poletto. "Contact structure and population immunity shape the selective advantage of emerging variants"
+
+# Code
 ## Simulation on network 
 The code implements an SIR compartmental model to simulate the spread and co-circulation of up to three pathogens on a network structure. The code can also be configured to simulate one or two pathogens by adjusting the parameter settings. In this study, we applied the code to the case of two strains.
 
@@ -111,4 +113,15 @@ python ComputeSelCoeffFittingFreq.py $Dir
 ```
 Where `$Dir` is the path to the folder containing the CSV files of the raw simulation outputs.
 
+# Data
+
+The dataset in this repository contains information on the number of non-household contacts in U.S. states during the COVID-19 pandemic. The number of non-household contacts was obtained from the **U.S. COVID-19 Trends and Impact Survey (CTIS)**, conducted by the *Delphi Research Group at Carnegie Mellon University* in partnership with *Facebook*, as described in [1].  
+
+The file **`data.csv`** reports the **weekly, state-level means and variances** of the number of contacts used in this study.
+
+---
+
+## Reference
+
+[1] Taube JC, Susswein Z, Colizza V, Bansal S. Characterising non-household contact patterns relevant to respiratory transmission in the USA: analysis of a cross-sectional survey. Lancet Digit Health. 2025;7. doi:10.1016/j.landig.2025.100888 
 
