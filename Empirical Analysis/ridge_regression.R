@@ -1,6 +1,6 @@
 library(tidyverse)
 
-df <- read_csv("chiara_collab/USCeoffDataforRegression_alpha_period.csv") |> 
+df <- read_csv("USCeoffDataforRegression_alpha_period.csv") |> 
   filter(! is.na(IM)) |> 
   mutate(EstimatedSelCoeff_znorm = scale(EstimatedSelCoeff),
          MD_znorm = scale(MD),
