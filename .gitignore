@@ -1,5 +1,12 @@
 *.csv
 ResData/
+figs/
+Figs/
+Data/
+Analysis Scripts/
+Conf/
+.ipynb_checkpoints/
+.vscode/
 perf*
 
 
