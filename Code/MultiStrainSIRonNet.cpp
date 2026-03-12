@@ -19,6 +19,8 @@ using namespace std;
 #define NStrain 3
 #define NState 27
 
+
+
 struct Vertex
 {
     int Status_old[NStrain] = {0};
@@ -29,6 +31,13 @@ struct Vertex
     vector<int> edgeType;
 };
 
+struct Patch
+{
+    int NNodes;
+    std::vector<Vertex> Nodes;
+    std::vector<int> ListofNode;
+};
+
 std::random_device rd;
 std::mt19937 gen(rd());
 std::uniform_real_distribution<double> unifreal_dis(0.0, 1.0);
@@ -37,7 +46,8 @@ void CreateNetworkFromEdgeList(string FilePath, Vertex Nodes[],vector <std::arra
 void CreateErdosReinyGraph(double p_grph, int NNodes, Vertex Nodes[]);
 void InitializingSeeds(int NNodes, int Nstrains, int Nseeds[], Vertex Nodes[], const bool ResetNodes = true);
 void InitializingSeeds2(int NNodes, int Nstrains, int Nseeds[], Vertex Nodes[], const bool ResetNodes = true);
-void MultiStrainSIRonNet(double beta[], double mu[], double sigma[][NStrain], int NNodes,vector <int>& ListofNode, Vertex Nodes[]);
+double susceptibility(const Vertex& node, int strain_k, double sigma[][NStrain]);
+void MultiStrainSIRonNet(double beta[], double mu[], double sigma[][NStrain], int NNodes, std::vector<int>& ListofNode, Vertex Nodes[], std::array<int,3>& strain_order, const std::array<double,3>& lambda_patch);
 int MapState2DecimalNumber(int State[], int Nstrains);
 void ReadParameters(string FilePath,double parameters[]);
 void ShuffleStatus(vector <int>& ListofNode, Vertex Nodes[], int NSample);
@@ -52,12 +62,28 @@ int main(int argc, char** argv)
     char label[] = "SIR";
     int NNode = 10000;
 
-    Vertex Nodes[NNode];
-    Vertex Nodes_org[NNode];
-    std::vector<int> ListofNode;
+    int num_patches = 2;
+    vector<Patch> patches(num_patches);
+    for(int ptch_ind=0; ptch_ind<num_patches; ptch_ind++)
+    {
+        patches[ptch_ind].NNodes = NNode;
+        patches[ptch_ind].Nodes.resize(NNode);
+        for(int i=0;i<NNode;i++) patches[ptch_ind].ListofNode.push_back(i);
+    }
+
+    // Patch patch;
+    // patch.NNodes = NNode;
+    // patch.Nodes.resize(NNode);
+    // for (int i=0; i<NNode; ++i) patch.ListofNode.push_back(i);
+
+    // Vertex Nodes[NNode];
+    // Vertex Nodes_org[NNode];
+    // std::vector<int> ListofNode;
+    // for (int i=0; i<NNode; ++i) ListofNode.push_back(i); 
+    std::vector<Vertex> Nodes_org(NNode);
     std::vector<std::array<int, 3>> EdgeListType1;
     std::vector<std::array<int, 3>> EdgeListType2;
-    for (int i=0; i<NNode; ++i) ListofNode.push_back(i); 
+
     /*double MeanDeg = 5;
     double p_grph = (double)MeanDeg / (double)NNode; // p = 0.005
     CreateErdosReinyGraph(p_grph, NNode, Nodes);*/
@@ -73,6 +99,7 @@ int main(int argc, char** argv)
     int I0_1 = 50, I0_2 = 50, I0_3 =50;
     double p_ShuffleEdge = 0;
     int itr = 100;
+    double p_mobility = 0.05;
     
 
     double parameters[23] = {beta_1,mu_1, r2_s, r2_e, r2_step, tau2, r3, tau3,sigma2, 
@@ -86,7 +113,13 @@ int main(int argc, char** argv)
     if (argc > 1) {
         string ConfigFilePath = argv[1];
         string NetworkFilePath = argv[2];
-        CreateNetworkFromEdgeList(NetworkFilePath, Nodes, EdgeListType1, EdgeListType2);
+        
+        for(int ptch_ind=0; ptch_ind<num_patches; ptch_ind++){
+            CreateNetworkFromEdgeList(NetworkFilePath, patches[ptch_ind].Nodes.data(), EdgeListType1, EdgeListType2);
+        }
+
+        //CreateNetworkFromEdgeList(NetworkFilePath, patch.Nodes.data(), EdgeListType1, EdgeListType2);
+        // CreateNetworkFromEdgeList(NetworkFilePath, Nodes, EdgeListType1, EdgeListType2);
         // Read parameters from file 
         ReadParameters(ConfigFilePath, parameters);
         beta_1 = parameters[0], mu_1 = parameters[1];
@@ -111,16 +144,16 @@ int main(int argc, char** argv)
         }
     }
     
-    double MeanDegree = 0; 
-    for (int i = 0; i < NNode; i++)
-    {
-        MeanDegree += Nodes[i].adjList.size();
-    }
-    MeanDegree = MeanDegree / (double)NNode;
+    // double MeanDegree = 0; 
+    // for (int i = 0; i < NNode; i++)
+    // {
+    //     MeanDegree += patch.Nodes[i].adjList.size();
+    // }
+    // MeanDegree = MeanDegree / (double)NNode;
     
-    for (size_t i = 0; i < NNode; i++){
-        Nodes_org[i] = Nodes[i];    
-        };
+    // for (size_t i = 0; i < NNode; i++){
+    //     Nodes_org[i] = patch.Nodes[i];    
+    //     };
 
     std::cout << "parameters: "<<endl;
     std::cout << "beta1= "<<beta_1 <<",  mu1= "<<mu_1<< endl;
@@ -145,6 +178,7 @@ int main(int argc, char** argv)
     std::vector<int> InfectedStatus;               //Infected States (SSI,SIS,...)
     std::array<int, NState> MapStateIndx2ColIndx1; // Index1 -> Column index of pupulation in each state
     std::array<int, NState> MapStateIndx2ColIndx2; // Index2 -> Column index of Infection Incident for each Infected state.
+    std::array<int,3> strain_order = {0,1,2};
 
     for (int i = 0; i < 3; i++)
     {
@@ -180,7 +214,7 @@ int main(int argc, char** argv)
     MapStateIndx2ColIndx1.fill(-1);
     for (int it = 0; it < ValidStatus.size(); it++)
     {
-        MapStateIndx2ColIndx1[ValidStatus[it]] = it + 2;
+        MapStateIndx2ColIndx1[ValidStatus[it]] = it + 3; // accounting for index of intC, t, ptch_id 
     }
     int maxIndx1 = *std::max_element(MapStateIndx2ColIndx1.begin(), MapStateIndx2ColIndx1.end());
     MapStateIndx2ColIndx2.fill(-1);
@@ -191,10 +225,10 @@ int main(int argc, char** argv)
 
     //==============Header of the Result files ===============
     // string HeaderFile1 = "r2,Sigma,t2,t3,it,t,node,status_previous,status_current,Infector,status_Infector";
-    string HeaderFile1 = "r2,Sigma,R1t2,deltat,it,t,node,status_previous,status_current,Infector,status_Infector";
+    string HeaderFile1 = "r2,Sigma,R1t2,deltat,it,t,ptch_id,node,status_previous,status_current,Infector,status_Infector";
     string HeaderFile2;
     // HeaderFile2 += "r2,Sigma,t2,t3,it,t";
-    HeaderFile2 += "r2,Sigma,R1t2,deltat,it,t";
+    HeaderFile2 += "r2,Sigma,R1t2,deltat,it,t,ptch_ind";
     for (int it = 0; it < ValidStatus.size(); it++)
     {
         HeaderFile2 += ",";
@@ -212,7 +246,7 @@ int main(int argc, char** argv)
     getcwd(PathC, 256);
     string Path = (string)PathC;
     char FileName1Suffix[128];
-    snprintf(FileName1Suffix, sizeof(FileName1Suffix), "_k=%.4f_beta1=%.3f_mu1=%.2f_tau=%.2f_r2=%.1f_%0.1f.csv", MeanDegree,beta_1, mu_1, tau2, r2_s, r2_e);
+    snprintf(FileName1Suffix, sizeof(FileName1Suffix), "_beta1=%.3f_mu1=%.2f_tau=%.2f_r2=%.1f_%0.1f.csv",beta_1, mu_1, tau2, r2_s, r2_e);
     string FileName1 = "TransmitionTrack_" + NetworkLabel + (string)FileName1Suffix;
     string Filepath1 = Path + "/" + (string)FileName1;
     ofstream file1;
@@ -223,7 +257,7 @@ int main(int argc, char** argv)
         file1 << endl;
     }
     char FileName2Suffix[128];
-    snprintf(FileName2Suffix, sizeof(FileName2Suffix), "_k=%.4f_beta1=%.3f_mu1=%.2f_tau=%.2f_r2=%.1f_%0.1f.csv",MeanDegree, beta_1, mu_1, tau2,r2_s, r2_e);
+    snprintf(FileName2Suffix, sizeof(FileName2Suffix), "_beta1=%.3f_mu1=%.2f_tau=%.2f_r2=%.1f_%0.1f.csv", beta_1, mu_1, tau2,r2_s, r2_e);
     string FileName2 = "TimeSerie_" + NetworkLabel + (string)FileName2Suffix;
     string Filepath2 = Path + "/" + (string)FileName2;
     ofstream file2;
@@ -234,24 +268,32 @@ int main(int argc, char** argv)
     //===========Creat Containers to store resuls=============
     int maxIndx2 = *std::max_element(MapStateIndx2ColIndx2.begin(), MapStateIndx2ColIndx2.end());
     const int StateArraySize = maxIndx2;
-    std::vector<int> State_current((StateArraySize + 1), 0);
+    std::vector<int> State_current((StateArraySize + 2), 0);
     std::vector<std::vector<int>> Res_timeserie_table;
-    std::array<int, 7> Res_TransmitionTrack;
-    std::vector<std::array<int, 7>> Res_TransmitionTrack_table;
+    std::array<int, 8> Res_TransmitionTrack;
+    std::vector<std::array<int, 8>> Res_TransmitionTrack_table;
     //========================================================
     int IndxSSS = MapStateIndx2ColIndx1[MapState2Index[0][0][0]];
     int IndxISS = MapStateIndx2ColIndx1[MapState2Index[1][0][0]];
+    int IndxIRS = MapStateIndx2ColIndx1[MapState2Index[1][2][0]];
+    int IndxISR = MapStateIndx2ColIndx1[MapState2Index[1][0][2]];
+    int IndxIRR = MapStateIndx2ColIndx1[MapState2Index[1][2][2]];
     int IndxSIS = MapStateIndx2ColIndx1[MapState2Index[0][1][0]];
-    int IndxSSI = MapStateIndx2ColIndx1[MapState2Index[0][0][1]];
-    int IndxRSS = MapStateIndx2ColIndx1[MapState2Index[2][0][0]];
     int IndxRIS = MapStateIndx2ColIndx1[MapState2Index[2][1][0]];
-    int IndxRSI = MapStateIndx2ColIndx1[MapState2Index[2][0][1]];
-    int IndxRRS = MapStateIndx2ColIndx1[MapState2Index[2][2][0]];
-    int IndxRRI = MapStateIndx2ColIndx1[MapState2Index[2][2][1]];
-    int IndxRSR = MapStateIndx2ColIndx1[MapState2Index[2][0][2]];
+    int IndxSIR = MapStateIndx2ColIndx1[MapState2Index[0][1][2]];
     int IndxRIR = MapStateIndx2ColIndx1[MapState2Index[2][1][2]];
+    int IndxSSI = MapStateIndx2ColIndx1[MapState2Index[0][0][1]];
+    int IndxRSI = MapStateIndx2ColIndx1[MapState2Index[2][0][1]];
+    int IndxSRI = MapStateIndx2ColIndx1[MapState2Index[0][2][1]];
+    int IndxRRI = MapStateIndx2ColIndx1[MapState2Index[2][2][1]];
+    int IndxRSS = MapStateIndx2ColIndx1[MapState2Index[2][0][0]];
+    int IndxRRS = MapStateIndx2ColIndx1[MapState2Index[2][2][0]];
+    int IndxRSR = MapStateIndx2ColIndx1[MapState2Index[2][0][2]];
     int IndxRRR = MapStateIndx2ColIndx1[MapState2Index[2][2][2]];
 
+    std::vector<std::vector<double>> mobility(num_patches, std::vector<double>(num_patches,0.0));
+    mobility[0][1] = p_mobility;   // infection from patch0 → patch1
+    mobility[1][0] = p_mobility;   // infection from patch1 → patch0
     
     vector<double> rVec;
     vector<double> sigma3Vec;
@@ -283,22 +325,22 @@ int main(int argc, char** argv)
     {       
         for (double Sigma3 : sigma3Vec)
         {
-    double mu_2 = mu_1 / tau2;
-    double mu_3 = mu_1 / tau3;
-    //double beta_1 = R0_1 * mu_1 / MeanDegree;
-    double beta_2 = (r2/tau2) * beta_1;
-    double beta_3 = (r3/tau3) * beta_1;
+            double mu_2 = mu_1 / tau2;
+            double mu_3 = mu_1 / tau3;
+            //double beta_1 = R0_1 * mu_1 / MeanDegree;
+            double beta_2 = (r2/tau2) * beta_1;
+            double beta_3 = (r3/tau3) * beta_1;
 
-    double beta[NStrain] = {beta_1, beta_2, beta_3};
-    double mu[NStrain] = {mu_1, mu_2, mu_3};
-    double Sigma12 = sigma2;
-    //double Sigma3 = 0.5;
-    double Sigma[3][NStrain] = {
-        {Sigma12, Sigma12, Sigma3},
-        {Sigma12, Sigma12, Sigma3},
-        {Sigma3, Sigma3, Sigma3}};
+            double beta[NStrain] = {beta_1, beta_2, beta_3};
+            double mu[NStrain] = {mu_1, mu_2, mu_3};
+            double Sigma12 = sigma2;
+            //double Sigma3 = 0.5;
+            double Sigma[3][NStrain] = {
+                {Sigma12, Sigma12, Sigma3},
+                {Sigma12, Sigma12, Sigma3},
+                {Sigma3, Sigma3, Sigma3}};
     
-    auto start = chrono::steady_clock::now();
+            auto start = chrono::steady_clock::now();
  
     // for (int t2 : t2Vec)
     for (double R1t2 : R1t2Vec)
@@ -307,18 +349,26 @@ int main(int argc, char** argv)
         {
             // int t3 = t2 + deltat;
             //auto start = chrono::steady_clock::now();
+            std::vector<std::array<int,3>> Infc_patch(num_patches, std::array<int,3>{0,0,0});
+            std::vector<std::array<double,3>> lambda_patch(num_patches, {0.0,0.0,0.0});
+
             for (int itrC = 0; itrC < itr; itrC++)
             {   
                 int Nseeds[NStrain] = {I0_1, 0, 0};
-                InitializingSeeds2(NNode, NStrain, Nseeds, Nodes, true);
+                
+                for(int ptch_ind = 0; ptch_ind < num_patches; ptch_ind++)
+                {
+                    InitializingSeeds2(NNode, NStrain,Nseeds, patches[ptch_ind].Nodes.data());
+                }
+                //InitializingSeeds2(NNode, NStrain, Nseeds, patch.Nodes.data(), true);
                 int timestep = 0;
-                int NofInfc = I0_1 + I0_2 + I0_3;
+                int NofInfc_total = I0_1 + I0_2 + I0_3;
                 int N_R1 = 0;
-                double P_R1 = 0.0;
+                std::vector<double> P_R1(num_patches, 0.0);
                 int t2 = 0;
                 int t3 = t2 + deltat;
-                int flag_emerge2 = 0;
-                int flag_emerge3 = 0;
+                std::vector<int> flag_emerge2(num_patches, 0);
+                std::vector<int> flag_emerge3(num_patches, 0);
                 int flag_shuffled = 1;
                 
                 // std::array<int, 3> SelEdgeToTrack = EdgeListToShuffle[0];
@@ -331,119 +381,152 @@ int main(int argc, char** argv)
                 // cout<<endl;
                 
                 //int SSS0 = NNode - NofInfc;
-                while (NofInfc > 0 && timestep < 1000)
+                while (NofInfc_total > 0 && timestep < 1000)
                 {   
-                    // Emerge new strains
-                    //int SSS1 = State_current[IndxSSS];
-                    // if (timestep == t2 && flag_emerge2 == 0)  
-                    if (P_R1 >= R1t2 && flag_emerge2 == 0)                   
-                    {
-                        if (flag_shuffled == 0 )
-                        {
-                            ShuffleStatus(ListofNode, Nodes, NSampleShuffling);
-                            flag_shuffled = 1;
-                        }
-                        flag_emerge2 = 1;
-                        t2 = timestep;
-                        int Nseeds[NStrain] = {0, I0_2, 0};
-                        InitializingSeeds2(NNode, NStrain, Nseeds, Nodes, false);
-                        //cout << timestep << " flag2: " << R0_1 << " " << SSS0 << endl;
-                    }
-                    //if (((double)SSS1 / (double)SSS0) < (1 / (pt2 * R0_12)) && flag_emerge2 == 1 && flag_emerge3 == 0)
-                    // if (timestep == t3 && flag_emerge3 == 0)
-                    t3 = t2 + deltat;
-                    if (P_R1 >= R1t2 && timestep == t3 && flag_emerge3 == 0)
-                    {
-                        if (flag_shuffled == 0 )
-                        {
-                            ShuffleStatus(ListofNode, Nodes, NSampleShuffling);
-                            flag_shuffled = 1;
-                        }      
-                        flag_emerge3 = 1;
-                        t3 = timestep;
-                        int Nseeds[NStrain] = {0, 0, I0_3};
-                        InitializingSeeds2(NNode, NStrain, Nseeds, Nodes, false);
-                        //cout << timestep<< " flag3: "<<R0_12<<" "<< SSS1 <<" "<<SSS0<< endl;
-                    }   
+                    NofInfc_total = 0;
+                    std::fill(Infc_patch.begin(), Infc_patch.end(), std::array<int,3>{0,0,0});
+                    std::fill(lambda_patch.begin(), lambda_patch.end(), std::array<double,3>{0.0,0.0,0.0});
 
-                    // Compute and recorde the current Status:
-                    State_current.assign(State_current.size(), 0);
-                    State_current[0] = itrC;
-                    State_current[1] = timestep;
-                    for (int i = 0; i < NNode; i++)
+
+                    for (int ptch_ind = 0; ptch_ind < num_patches; ptch_ind++)
                     {
-                        int Status_o = MapState2Index[Nodes[i].Status_old[0]][Nodes[i].Status_old[1]][Nodes[i].Status_old[2]];
-                        int Status_n = MapState2Index[Nodes[i].Status[0]][Nodes[i].Status[1]][Nodes[i].Status[2]];
-                        bool StatusChange = (Status_o != Status_n);
-                        double alpha_Ik = 1;
-                        for (int kk = 0; kk < NStrain; kk++)
+                        Patch &patch = patches[ptch_ind];   // convenient alias
+
+                        // Emerge new strains
+                        //int SSS1 = State_current[IndxSSS];
+                        // if (timestep == t2 && flag_emerge2 == 0)  
+                        if (P_R1[ptch_ind] >= R1t2 && flag_emerge2[ptch_ind] == 0)                   
                         {
-                            if (Nodes[i].Status[kk] == 1)
+                            if (flag_shuffled == 0 )
                             {
-                                alpha_Ik = 0;
-                                break;
+                                ShuffleStatus(patch.ListofNode, patch.Nodes.data(), NSampleShuffling);
+                                flag_shuffled = 1;
                             }
+                            t2 = timestep;
+                            int Nseeds[NStrain] = {0, I0_2, 0};
+                            InitializingSeeds2(NNode, NStrain, Nseeds, patch.Nodes.data(), false);
+                            flag_emerge2[ptch_ind] = 1;
+                            //cout << timestep << " flag2: " << R0_1 << " " << SSS0 << endl;
                         }
-                        bool existsI = (alpha_Ik == 0);
-                        if ((StatusChange && existsI) || (timestep == 0 && existsI) )
+                        //if (((double)SSS1 / (double)SSS0) < (1 / (pt2 * R0_12)) && flag_emerge2 == 1 && flag_emerge3 == 0)
+                        // if (timestep == t3 && flag_emerge3 == 0)
+                        t3 = t2 + deltat;
+                        if (P_R1[ptch_ind] >= R1t2 && timestep == t3 && flag_emerge3[ptch_ind] == 0)
                         {
-                            int Infector = Nodes[i].Infector;
-                            int Status_Infctor;
-                            if (Infector != -1){
-                            Status_Infctor = MapState2Index[Nodes[Infector].Status_old[0]][Nodes[Infector].Status_old[1]][Nodes[Infector].Status_old[2]];
-                             }
-                            else{
-                            Status_Infctor = -1;    
-                            }
-                             
-                            // Recording the transmition track
-                            if (ProduceEventMatix)
+                            if (flag_shuffled == 0 )
                             {
-                                Res_TransmitionTrack = {itrC, timestep, i, Status_o, Status_n, Infector, Status_Infctor};
-                                Res_TransmitionTrack_table.push_back(Res_TransmitionTrack);
-                            }
-                            int Ind2 = MapStateIndx2ColIndx2[Status_n];
-                            State_current[Ind2] += 1;
-                        }
-                        int Ind1 = MapStateIndx2ColIndx1[Status_n];
-                        State_current[Ind1] += 1;
-                    }
-                    Res_timeserie_table.push_back(State_current);
+                                ShuffleStatus(patch.ListofNode, patch.Nodes.data(), NSampleShuffling);
+                                flag_shuffled = 1;
+                            }      
+                            t3 = timestep;
+                            int Nseeds[NStrain] = {0, 0, I0_3};
+                            InitializingSeeds2(NNode, NStrain, Nseeds, patch.Nodes.data(), false);
+                            flag_emerge3[ptch_ind] = 1;
+                            //cout << timestep<< " flag3: "<<R0_12<<" "<< SSS1 <<" "<<SSS0<< endl;
+                        }   
 
-                    // Update the old status with the current status and prepare to compute the next step.
-                    for (size_t i = 0; i < NNode; i++)
-                    {
-                        for (int k = 0; k < NStrain; k++)
+                        // Compute and recorde the current Status:
+
+                        State_current.assign(State_current.size(), 0);
+                        State_current[0] = itrC;
+                        State_current[1] = timestep;
+                        State_current[2] = ptch_ind;
+
+                        for (int i = 0; i < patch.NNodes; i++)
                         {
-                            Nodes[i].Status_old[k] = Nodes[i].Status[k];
+                            int Status_o = MapState2Index[patch.Nodes[i].Status_old[0]][patch.Nodes[i].Status_old[1]][patch.Nodes[i].Status_old[2]];
+                            int Status_n = MapState2Index[patch.Nodes[i].Status[0]][patch.Nodes[i].Status[1]][patch.Nodes[i].Status[2]];
+                            bool StatusChange = (Status_o != Status_n);
+                            double alpha_Ik = 1;
+                            for (int kk = 0; kk < NStrain; kk++)
+                            {
+                                if (patch.Nodes[i].Status[kk] == 1)
+                                {
+                                    alpha_Ik = 0;
+                                    break;
+                                }
+                            }
+                            bool existsI = (alpha_Ik == 0);
+                            if ((StatusChange && existsI) || (timestep == 0 && existsI) )
+                            {
+                                int Infector = patch.Nodes[i].Infector;
+                                int Status_Infctor;
+                                if (Infector != -1){
+                                Status_Infctor = MapState2Index[patch.Nodes[Infector].Status_old[0]][patch.Nodes[Infector].Status_old[1]][patch.Nodes[Infector].Status_old[2]];
+                                }
+                                else{
+                                Status_Infctor = -1;    
+                                }
+                                
+                                // Recording the transmition track
+                                if (ProduceEventMatix)
+                                {
+                                    Res_TransmitionTrack = {itrC, timestep,ptch_ind, i, Status_o, Status_n, Infector, Status_Infctor};
+                                    Res_TransmitionTrack_table.push_back(Res_TransmitionTrack);
+                                }
+                                int Ind2 = MapStateIndx2ColIndx2[Status_n];
+                                State_current[Ind2] += 1;
+                            }
+                            int Ind1 = MapStateIndx2ColIndx1[Status_n];
+                            State_current[Ind1] += 1;
                         }
+                        Res_timeserie_table.push_back(State_current);
+
+                        // Update the old status with the current status and prepare to compute the next step.
+                        for (size_t i = 0; i < NNode; i++)
+                        {
+                            for (int k = 0; k < NStrain; k++)
+                            {
+                                patch.Nodes[i].Status_old[k] = patch.Nodes[i].Status[k];
+                            }
+                        }
+
+                        for (int s : InfectedStatus)
+                        { 
+                            NofInfc_total += State_current[MapStateIndx2ColIndx1[s]];
+                        }
+                        Infc_patch[ptch_ind] = {
+                        State_current[IndxISS]+State_current[IndxIRS]+State_current[IndxISR]+State_current[IndxIRR],
+                        State_current[IndxSIS]+State_current[IndxRIS]+State_current[IndxSIR]+State_current[IndxRIR],
+                        State_current[IndxSSI]+State_current[IndxRSI]+State_current[IndxSRI]+State_current[IndxRRI] };
+
+                        N_R1 = State_current[IndxRSS]+State_current[IndxRIS]+State_current[IndxRSI]+State_current[IndxRRS]+State_current[IndxRRI]+State_current[IndxRSR]+State_current[IndxRIR]+State_current[IndxRRR];
+                        P_R1[ptch_ind] = (double)N_R1 / (double)NNode; 
                     }
 
-                    NofInfc = 0;
-                    for (int s : InfectedStatus)
+                    for (int ptch_i = 0; ptch_i < num_patches; ptch_i++)
                     {
-                        NofInfc += State_current[MapStateIndx2ColIndx1[s]];
+                        for (int ptch_j = 0; ptch_j < num_patches; ptch_j++)
+                        {
+                            if(ptch_i==ptch_j) continue;
+                            for (int k = 0; k < NStrain; k++)
+                            {
+                                lambda_patch[ptch_i][k] += mobility[ptch_j][ptch_i] * ((double)Infc_patch[ptch_j][k] / patches[ptch_j].NNodes);
+                            }
+                        }
                     }
-                     
-                    N_R1 = State_current[IndxRSS]+State_current[IndxRIS]+State_current[IndxRSI]+State_current[IndxRRS]+State_current[IndxRRI]+State_current[IndxRSR]+State_current[IndxRIR]+State_current[IndxRRR];
-                    P_R1 = (double)N_R1 / (double)NNode; 
                     timestep += 1;
                     // Compute the next status and update the current status:
-                    MultiStrainSIRonNet(beta, mu, Sigma, NNode, ListofNode, Nodes);
-                    if (p_ShuffleEdge>0)
+                    for (int ptch_ind = 0; ptch_ind < num_patches; ptch_ind++)
                     {
-                        // ShufflingEdges(p_ShuffleEdge, EdgeListType2 ,NNode, Nodes ,Nodes_org);
-                        // ShufflingEdges(1, EdgeListToShuffle ,NNode, Nodes ,Nodes_org);
-                        ShufflingEdges2(1, EdgeListToShuffle , Nodes);
-                    } 
+                        Patch &patch = patches[ptch_ind]; 
+                        MultiStrainSIRonNet(beta, mu, Sigma, patch.NNodes, patch.ListofNode, patch.Nodes.data(), strain_order, lambda_patch[ptch_ind]);
 
-                // cout <<"t= "<<timestep<<": ";
-                // for (int v : Nodes[SelEdgeToTrack[0]].adjList)
-                // {
-                //     cout << v<<", ";
-                // } 
-                // cout << endl;
-                    
+                        if (p_ShuffleEdge>0)
+                        {
+                            // ShufflingEdges(p_ShuffleEdge, EdgeListType2 ,NNode, Nodes ,Nodes_org);
+                            // ShufflingEdges(1, EdgeListToShuffle ,NNode, Nodes ,Nodes_org);
+                            ShufflingEdges2(1, EdgeListToShuffle , patch.Nodes.data());
+                        } 
+                    }
+
+                    // cout <<"t= "<<timestep<<": ";
+                    // for (int v : Nodes[SelEdgeToTrack[0]].adjList)
+                    // {
+                    //     cout << v<<", ";
+                    // } 
+                    // cout << endl;
+                        
                   
                 }
                 // reseting the network to the orginal one and selecting a new set of random link (this part is for the second method of shuffling links)
@@ -455,9 +538,12 @@ int main(int argc, char** argv)
                     for (size_t ei = 0; ei < NEdgetoSuffle; ei++){
                         EdgeListToShuffle.push_back(EdgeListType2[ei]);
                     };
-                    for (size_t nodei = 0; nodei < NNode; nodei++){
-                        Nodes[nodei].adjList = Nodes_org[nodei].adjList;
-                    };
+                    for (int ptch_ind = 0; ptch_ind < num_patches; ptch_ind++)
+                    {
+                        for (size_t nodei = 0; nodei < NNode; nodei++){
+                            patches[ptch_ind].Nodes[nodei].adjList = Nodes_org[nodei].adjList;
+                        };
+                    }
                 }
 
 
@@ -535,16 +621,51 @@ void CreateErdosReinyGraph(double p_grph, int NNodes, Vertex Nodes[])
     }
 }
 
-void MultiStrainSIRonNet(double beta[], double mu[], double sigma[][NStrain], int NNodes,vector <int>& ListofNode, Vertex Nodes[])
+double susceptibility(const Vertex& node, int strain_k, double sigma[][NStrain])
+{
+    // Check if node is currently infected
+    for (int kk = 0; kk < NStrain; kk++)
+    {
+        if (node.Status[kk] == 1) return 0.0; // already infected
+    }
+    // Compute cross-immunity factor   
+    int StateIndx_i = 9 * node.Status_old[0] + 3 * node.Status_old[1] + node.Status_old[2];
+    double alpha_Rk = 0;
+    if (StateIndx_i == 0) alpha_Rk = 1;
+    else if (StateIndx_i == 18 || StateIndx_i == 8) alpha_Rk = sigma[0][strain_k];
+    else if (StateIndx_i == 6 || StateIndx_i == 20) alpha_Rk = sigma[1][strain_k];
+    else if (StateIndx_i == 2 || StateIndx_i == 24) alpha_Rk = sigma[2][strain_k];
+    
+    return alpha_Rk;
+}
+
+void MultiStrainSIRonNet(double beta[], double mu[], double sigma[][NStrain], int NNodes,vector <int>& ListofNode, Vertex Nodes[], std::array<int,3>& strain_order ,const std::array<double,3>& lambda_patch)
 {
     // beta_k = P(S-->I) for kth starin
     // mu_k = P(I-->R) for kth starin
     std::shuffle(ListofNode.begin(), ListofNode.end(), gen);
-
+    std::shuffle(strain_order.begin(), strain_order.end(), gen);
     for (int i : ListofNode)
     {
-        for (int k = 0; k < NStrain; k++)
+
+        for (int k_indx = 0; k_indx < NStrain; k_indx++)
         {
+            int k = strain_order[k_indx]; //  k is the shuffled strain
+
+            // External infection due to mobility from other pathces
+            if ( (Nodes[i].Status_old[k] == 0) && (lambda_patch[k]>0) ) // node susceptible to strain k
+            {
+                double suscep_k = susceptibility(Nodes[i], k, sigma);   // this copute the scale facror of susceptibility due to cross-immunity \sigma and double infection  
+                double p_ext = suscep_k * beta[k] * lambda_patch[k] ;
+                double r_ext = unifreal_dis(gen);
+        
+                if (r_ext < p_ext)
+                {
+                    Nodes[i].Status[k] = 1;
+                    Nodes[i].Infector = -1; // external infection
+                }
+            }
+            //Internal infection due to transmission form an infected neigbour 
             if (Nodes[i].Status_old[k] == 1) //if the source is in Status == I for kth strain (can be an Infector):
             {
                 //Transmition
@@ -552,35 +673,8 @@ void MultiStrainSIRonNet(double beta[], double mu[], double sigma[][NStrain], in
                 {
                     if (Nodes[v].Status_old[k] == 0) //if the target is in Status == S for kth strain:
                     {
-                        double alpha_Ik = 1;
-                        for (int kk = 0; kk < NStrain; kk++)
-                        {
-                            if (Nodes[v].Status[kk] == 1)
-                            {
-                                alpha_Ik = 0;
-                                break;
-                            }
-                        }
-                        int StateIndx_v = 9 * Nodes[v].Status_old[0] + 3 * Nodes[v].Status_old[1] + Nodes[v].Status_old[2];
-                        double alpha_Rk = 0;
-                        if (StateIndx_v == 0)
-                        {
-                            alpha_Rk = 1;
-                        }
-                        else if (StateIndx_v == 18 || StateIndx_v == 8)
-                        {
-                            alpha_Rk = sigma[0][k];
-                        }
-                        else if (StateIndx_v == 6 || StateIndx_v == 20)
-                        {
-                            alpha_Rk = sigma[1][k];
-                        }
-                        else if (StateIndx_v == 2 || StateIndx_v == 24)
-                        {
-                            alpha_Rk = sigma[2][k];
-                        }
-
-                        double p_trans = alpha_Ik * alpha_Rk * beta[k];
+                        double suscep_k = susceptibility(Nodes[v], k, sigma);   // this copute the scale facror of susceptibility due to cross-immunity \sigma and double infection  
+                        double p_trans = suscep_k * beta[k];
                         double r1 = unifreal_dis(gen);
                         if (r1 < p_trans)
                         {
