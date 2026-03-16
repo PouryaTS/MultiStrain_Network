@@ -37,6 +37,45 @@ struct Patch
     std::vector<Vertex> Nodes;
     std::vector<int> ListofNode;
 };
+struct PatchParams
+{
+    std::array<int,3> Init = {50,50,0};;
+    std::array<double,3> R1t2 = {0,0.1,1}; // {r1t2_s, r1t2_e, r1t2_step}
+    std::string network_file = "";
+};
+
+struct GlobalParams
+{
+    double beta1 = 0.0175;
+    double mu1   = 1.0/7.0;
+
+    double tau2 = 1;
+    double tau3 = 1;
+    double r3   = 1;
+
+    double sigma2 = 0.05;
+
+    double r2_s = 1.5;
+    double r2_e = 1.6;
+    double r2_step = 0.25;
+
+    double sigma3_s = 0;
+    double sigma3_e = 0.1;
+    double sigma3_step = 0.2;
+
+    double r1t2_s = 0;
+    double r1t2_e = 0.3;
+    double r1t2_step = 1;
+
+    int deltat_s = 0;
+    int deltat_e = 30;
+    int deltat_step = 30;
+
+    double p_ShuffleEdge = 0;
+    double p_mobility = 0.05;
+
+    int itr = 100;
+};
 
 std::random_device rd;
 std::mt19937 gen(rd());
@@ -49,7 +88,9 @@ void InitializingSeeds2(int NNodes, int Nstrains, int Nseeds[], Vertex Nodes[], 
 double susceptibility(const Vertex& node, int strain_k, double sigma[][NStrain]);
 void MultiStrainSIRonNet(double beta[], double mu[], double sigma[][NStrain], int NNodes, std::vector<int>& ListofNode, Vertex Nodes[], std::array<int,3>& strain_order, const std::array<double,3>& lambda_patch);
 int MapState2DecimalNumber(int State[], int Nstrains);
-void ReadParameters(string FilePath,double parameters[]);
+// void ReadParameters(string FilePath,double parameters[]);
+void ReadParameters(const std::string& FilePath, GlobalParams& global, std::vector<PatchParams>& patch_params);
+void ReadNetworkPaths(const std::string& FilePath, std::vector<PatchParams>& patch_params);
 void ShuffleStatus(vector <int>& ListofNode, Vertex Nodes[], int NSample);
 void ShufflingEdges(double p, vector <std::array<int, 3>>& EdgeList2 ,int NNode,Vertex Nodes[],Vertex Nodes_org[]);
 void ShufflingEdges2(double p, vector <std::array<int, 3>>& EdgeList2 ,Vertex Nodes[]);
@@ -89,49 +130,57 @@ int main(int argc, char** argv)
     CreateErdosReinyGraph(p_grph, NNode, Nodes);*/
     bool ProduceEventMatix = false;
     
-    double beta_1 = 0.04, mu_1 = 1.0/7.0, tau2 = 1,tau3 = 1, r3 = 1, sigma2 = 0.05;
-    //double r2 = 1.8;
-    double r2_s = 1.0 , r2_e = 1.1, r2_step = 0.1;
-    double sigma3_s = 0, sigma3_e = 1, sigma3_step = 0.5;
-    // int t2_s = 0, t2_e = 30, t2_step =30;
-    double r1t2_s =0, r1t2_e =0.3, r1t2_step=1;
-    int deltat_s = 0, deltat_e = 30, deltat_step =30;
-    int I0_1 = 50, I0_2 = 50, I0_3 =50;
-    double p_ShuffleEdge = 0;
-    int itr = 100;
-    double p_mobility = 0.05;
+    GlobalParams global_params;
+    vector<PatchParams> patch_params;
+
+    // double beta_1 = 0.04, mu_1 = 1.0/7.0, tau2 = 1,tau3 = 1, r3 = 1, sigma2 = 0.05;
+    // //double r2 = 1.8;
+    // double r2_s = 1.0 , r2_e = 1.1, r2_step = 0.1;
+    // double sigma3_s = 0, sigma3_e = 1, sigma3_step = 0.5;
+    // // int t2_s = 0, t2_e = 30, t2_step =30;
+    // double r1t2_s =0, r1t2_e =0.3, r1t2_step=1;
+    // int deltat_s = 0, deltat_e = 30, deltat_step =30;
+    // int I0_1 = 50, I0_2 = 50, I0_3 =50;
+    // double p_ShuffleEdge = 0;
+    // int itr = 100;
+    // double p_mobility = 0.05;
     
 
-    double parameters[23] = {beta_1,mu_1, r2_s, r2_e, r2_step, tau2, r3, tau3,sigma2, 
-                    sigma3_s, sigma3_e, sigma3_step, 
-                    // (double)t2_s, (double)t2_e, (double)t2_step,
-                    r1t2_s =0, r1t2_e =0.3, r1t2_step=1,
-                    (double)deltat_s, (double)deltat_e, (double)deltat_step,
-                    (double)I0_1, (double)I0_2, (double)I0_3,(double)p_ShuffleEdge,(double)itr};
+    // double parameters[24] = {beta_1,mu_1, r2_s, r2_e, r2_step, tau2, r3, tau3,sigma2, 
+    //                 sigma3_s, sigma3_e, sigma3_step, 
+    //                 // (double)t2_s, (double)t2_e, (double)t2_step,
+    //                 r1t2_s =0, r1t2_e =0.3, r1t2_step=1,
+    //                 (double)deltat_s, (double)deltat_e, (double)deltat_step,
+    //                 (double)I0_1, (double)I0_2, (double)I0_3,(double)p_mobility,(double)p_ShuffleEdge,(double)itr};
 
     string NetworkLabel = "Net";
     if (argc > 1) {
         string ConfigFilePath = argv[1];
-        string NetworkFilePath = argv[2];
-        
-        for(int ptch_ind=0; ptch_ind<num_patches; ptch_ind++){
-            CreateNetworkFromEdgeList(NetworkFilePath, patches[ptch_ind].Nodes.data(), EdgeListType1, EdgeListType2);
+        string NetworkListFile = argv[2];
+        ReadParameters(ConfigFilePath, global_params, patch_params);
+        ReadNetworkPaths(NetworkListFile, patch_params);
+        for(int ptch_ind=0; ptch_ind<num_patches; ptch_ind++)
+        {
+            CreateNetworkFromEdgeList(patch_params[ptch_ind].network_file, patches[ptch_ind].Nodes.data(), EdgeListType1, EdgeListType2);
+            // CreateNetworkFromEdgeList("Code/Net/NetworkEdgelist_2Layers_lambda=2.0_meanDegree=8.0_std=8.0.csv", patches[ptch_ind].Nodes.data(), EdgeListType1, EdgeListType2);
         }
 
         //CreateNetworkFromEdgeList(NetworkFilePath, patch.Nodes.data(), EdgeListType1, EdgeListType2);
         // CreateNetworkFromEdgeList(NetworkFilePath, Nodes, EdgeListType1, EdgeListType2);
         // Read parameters from file 
-        ReadParameters(ConfigFilePath, parameters);
-        beta_1 = parameters[0], mu_1 = parameters[1];
-        r2_s = parameters[2] , r2_e = parameters[3], r2_step = parameters[4];
-        tau2 = parameters[5], r3 = parameters[6],tau3 = parameters[7],sigma2 = parameters[8];
-        sigma3_s = parameters[9], sigma3_e = parameters[10], sigma3_step = parameters[11];
-        // t2_s = (int)parameters[12], t2_e = (int)parameters[13], t2_step =(int)parameters[14];
-        r1t2_s = parameters[12], r1t2_e = parameters[13], r1t2_step = parameters[14];
-        deltat_s = (int)parameters[15], deltat_e = (int)parameters[16], deltat_step =(int)parameters[17];
-        I0_1 = (int)parameters[18], I0_2 = (int)parameters[19], I0_3 =(int)parameters[20];
-        p_ShuffleEdge = parameters[21];
-        itr = (int)parameters[22];
+        // ReadParameters(ConfigFilePath, parameters);
+        // beta1 = parameters[0], mu1 = parameters[1];
+        // r2_s = parameters[2] , r2_e = parameters[3], r2_step = parameters[4];
+        // tau2 = parameters[5], r3 = parameters[6],tau3 = parameters[7],sigma2 = parameters[8];
+        // sigma3_s = parameters[9], sigma3_e = parameters[10], sigma3_step = parameters[11];
+        // // t2_s = (int)parameters[12], t2_e = (int)parameters[13], t2_step =(int)parameters[14];
+        // r1t2_s = parameters[12], r1t2_e = parameters[13], r1t2_step = parameters[14];
+        // deltat_s = (int)parameters[15], deltat_e = (int)parameters[16], deltat_step =(int)parameters[17];
+        // I0_1 = (int)parameters[18], I0_2 = (int)parameters[19], I0_3 =(int)parameters[20];
+        // p_mobility = parameters[21];
+        // p_ShuffleEdge = parameters[22];
+        // itr = (int)parameters[23];
+
         if (argc > 3){
         NetworkLabel =  argv[3];      
         }
@@ -155,15 +204,16 @@ int main(int argc, char** argv)
     //     Nodes_org[i] = patch.Nodes[i];    
     //     };
 
-    std::cout << "parameters: "<<endl;
-    std::cout << "beta1= "<<beta_1 <<",  mu1= "<<mu_1<< endl;
-    std::cout << "r2= "<<r2_s<<":"<<r2_e<<":"<<r2_step<<",  tau2= "<<tau2<< endl;
-    std::cout << "sigma2= "<<sigma2<< endl;
-    std::cout << "r3= "<<r3<<",  tau3= "<<tau3<< endl;
-    std::cout << "sigma3= "<<sigma3_s<<":"<<sigma3_e<<":"<<sigma3_step<< endl;
+    std::cout << "parameters: "<< endl;
+    std::cout << "number of patches= "<< patch_params.size() << endl;
+    std::cout << "beta1= "<<global_params.beta1<<",  mu1= "<<global_params.mu1<< endl;
+    std::cout << "r2= "<<global_params.r2_s<<":"<<global_params.r2_e<<":"<<global_params.r2_step<<",  tau2= "<<global_params.tau2<< endl;
+    std::cout << "r3= "<<global_params.r3<<",  tau3= "<<global_params.tau3<< endl;
+    std::cout << "sigma2= "<<global_params.sigma2<< endl;
+    std::cout << "sigma3= "<<global_params.sigma3_s<<":"<<global_params.sigma3_e<<":"<<global_params.sigma3_step<< endl;
     // cout << "t2= "<<t2_s<<":"<<t2_e<<":"<<t2_step<<",  deltat= "<<deltat_s<<":"<<deltat_e<<":"<<deltat_step<< endl;
-    std::cout << "R1t2= "<<r1t2_s<<":"<<r1t2_e<<":"<<r1t2_step<<",  deltat= "<<deltat_s<<":"<<deltat_e<<":"<<deltat_step<< endl;
-    std::cout << "Iinit= ["<<I0_1<<", "<<I0_2<<", "<<I0_3<<"]"<<", p_ShuffleEdge= "<<p_ShuffleEdge<<",  itr= " <<itr<<endl;
+    std::cout << "R1t2 patch 1= "<<patch_params[0].R1t2[0]<<":"<<patch_params[0].R1t2[1]<<":"<<patch_params[0].R1t2[2]<<",  deltat= "<<global_params.deltat_s<<":"<<global_params.deltat_e<<":"<<global_params.deltat_step<< endl;
+    std::cout << "p_mobility= "<<global_params.p_mobility<<", p_ShuffleEdge= "<<global_params.p_ShuffleEdge<<",  itr= " <<global_params.itr<<endl;
 
     //==================================================================================================
     //  - Map the States to a decimal number Index.
@@ -225,10 +275,10 @@ int main(int argc, char** argv)
 
     //==============Header of the Result files ===============
     // string HeaderFile1 = "r2,Sigma,t2,t3,it,t,node,status_previous,status_current,Infector,status_Infector";
-    string HeaderFile1 = "r2,Sigma,R1t2,deltat,it,t,ptch_id,node,status_previous,status_current,Infector,status_Infector";
+    string HeaderFile1 = "r2,Sigma,R1t2_ptch1,R1t2_ptch2,deltat,it,t,ptch_id,node,status_previous,status_current,Infector,status_Infector";
     string HeaderFile2;
     // HeaderFile2 += "r2,Sigma,t2,t3,it,t";
-    HeaderFile2 += "r2,Sigma,R1t2,deltat,it,t,ptch_ind";
+    HeaderFile2 += "r2,Sigma,R1t2_ptch1,R1t2_ptch2,deltat,it,t,ptch_ind";
     for (int it = 0; it < ValidStatus.size(); it++)
     {
         HeaderFile2 += ",";
@@ -246,7 +296,7 @@ int main(int argc, char** argv)
     getcwd(PathC, 256);
     string Path = (string)PathC;
     char FileName1Suffix[128];
-    snprintf(FileName1Suffix, sizeof(FileName1Suffix), "_beta1=%.3f_mu1=%.2f_tau=%.2f_r2=%.1f_%0.1f.csv",beta_1, mu_1, tau2, r2_s, r2_e);
+    snprintf(FileName1Suffix, sizeof(FileName1Suffix), "_beta1=%.3f_mu1=%.2f_tau=%.2f_r2=%.1f_%0.1f.csv",global_params.beta1, global_params.mu1, global_params.tau2, global_params.r2_s, global_params.r2_e);
     string FileName1 = "TransmitionTrack_" + NetworkLabel + (string)FileName1Suffix;
     string Filepath1 = Path + "/" + (string)FileName1;
     ofstream file1;
@@ -257,13 +307,16 @@ int main(int argc, char** argv)
         file1 << endl;
     }
     char FileName2Suffix[128];
-    snprintf(FileName2Suffix, sizeof(FileName2Suffix), "_beta1=%.3f_mu1=%.2f_tau=%.2f_r2=%.1f_%0.1f.csv", beta_1, mu_1, tau2,r2_s, r2_e);
+    snprintf(FileName2Suffix, sizeof(FileName2Suffix), "_beta1=%.3f_mu1=%.2f_tau=%.2f_r2=%.1f_%0.1f.csv", global_params.beta1, global_params.mu1, global_params.tau2,global_params.r2_s, global_params.r2_e);
     string FileName2 = "TimeSerie_" + NetworkLabel + (string)FileName2Suffix;
     string Filepath2 = Path + "/" + (string)FileName2;
     ofstream file2;
     file2.open(Filepath2);
     file2 << HeaderFile2;
     file2 << endl;
+
+
+
     //========================================================
     //===========Creat Containers to store resuls=============
     int maxIndx2 = *std::max_element(MapStateIndx2ColIndx2.begin(), MapStateIndx2ColIndx2.end());
@@ -292,24 +345,26 @@ int main(int argc, char** argv)
     int IndxRRR = MapStateIndx2ColIndx1[MapState2Index[2][2][2]];
 
     std::vector<std::vector<double>> mobility(num_patches, std::vector<double>(num_patches,0.0));
-    mobility[0][1] = p_mobility;   // infection from patch0 → patch1
-    mobility[1][0] = p_mobility;   // infection from patch1 → patch0
-    
+    mobility[0][1] = global_params.p_mobility;   // infection from patch0 → patch1
+    mobility[1][0] = global_params.p_mobility;   // infection from patch1 → patch0
     vector<double> rVec;
     vector<double> sigma3Vec;
-    // vector<int> t2Vec;
-    vector<double> R1t2Vec;
+    std::vector<vector<double>> R1t2Vec(2);
     vector<int> deltatVec;
+    cout<<"vec alocation"<<endl;
 
-    for (double ri = r2_s; ri < r2_e; ri += r2_step){rVec.push_back(ri);}
-    for (double sigmai = sigma3_s; sigmai <= sigma3_e; sigmai += sigma3_step){sigma3Vec.push_back(sigmai);}
-    // for (int ti = t2_s; ti < t2_e; ti += t2_step){t2Vec.push_back(ti);}
-    for (double r1t2i = r1t2_s; r1t2i < r1t2_e; r1t2i += r1t2_step){R1t2Vec.push_back(r1t2i);}
-    for (int ti = deltat_s; ti < deltat_e; ti += deltat_step){deltatVec.push_back(ti);}
+    for (double ri = global_params.r2_s; ri < global_params.r2_e; ri += global_params.r2_step){rVec.push_back(ri);}
+    for (double sigmai = global_params.sigma3_s; sigmai <= global_params.sigma3_e; sigmai += global_params.sigma3_step){sigma3Vec.push_back(sigmai);}
+    for (double r1t2i = patch_params[0].R1t2[0]; r1t2i < patch_params[0].R1t2[1]; r1t2i += patch_params[0].R1t2[2]){R1t2Vec[0].push_back(r1t2i);}
+    for (double r1t2i = patch_params[1].R1t2[0]; r1t2i < patch_params[1].R1t2[1]; r1t2i += patch_params[1].R1t2[2]){R1t2Vec[1].push_back(r1t2i);}
+    // for (double r1t2i = r1t2_s; r1t2i <r1t2_e; r1t2i += r1t2_step){R1t2Vec[0].push_back(r1t2i);}
+    // for (double r1t2i = r1t2_s; r1t2i <r1t2_e; r1t2i += r1t2_step){R1t2Vec[1].push_back(r1t2i);}
+    for (int ti = global_params.deltat_s; ti < global_params.deltat_e; ti += global_params.deltat_step){deltatVec.push_back(ti);}
+    cout<<"vec alocation end"<<endl;
 
     int NSampleShuffling = 20000;
     int NEdgeType2 = EdgeListType2.size();
-    int NEdgetoSuffle = (int)(p_ShuffleEdge * (double)NEdgeType2);
+    int NEdgetoSuffle = (int)(global_params.p_ShuffleEdge * (double)NEdgeType2);
     if (NEdgetoSuffle % 2 == 1){
         NEdgetoSuffle = NEdgetoSuffle + 1;
         }
@@ -319,268 +374,267 @@ int main(int argc, char** argv)
     {
         EdgeListToShuffle.push_back(EdgeListType2[ei]);
     }
-    
+
+    auto start = chrono::steady_clock::now();
+    cout<<"loop start"<<endl;
     
     for (double r2 : rVec)
     {       
+        cout<<" loop rVecend"<<endl;
+
         for (double Sigma3 : sigma3Vec)
         {
-            double mu_2 = mu_1 / tau2;
-            double mu_3 = mu_1 / tau3;
-            //double beta_1 = R0_1 * mu_1 / MeanDegree;
-            double beta_2 = (r2/tau2) * beta_1;
-            double beta_3 = (r3/tau3) * beta_1;
 
-            double beta[NStrain] = {beta_1, beta_2, beta_3};
-            double mu[NStrain] = {mu_1, mu_2, mu_3};
-            double Sigma12 = sigma2;
-            //double Sigma3 = 0.5;
+            double mu2 = global_params.mu1 / global_params.tau2;
+            double mu3 = global_params.mu1 / global_params.tau3;
+            //double beta_1 = R0_1 * mu_1 / MeanDegree;
+            double beta2 = (r2/global_params.tau2) * global_params.beta1;
+            double beta3 = (global_params.r3/global_params.tau3) * global_params.beta1;
+
+            double beta[NStrain] = {global_params.beta1, beta2, beta3};
+            double mu[NStrain] = {global_params.mu1, mu2, mu3};
+            double Sigma12 = global_params.sigma2;
             double Sigma[3][NStrain] = {
                 {Sigma12, Sigma12, Sigma3},
                 {Sigma12, Sigma12, Sigma3},
                 {Sigma3, Sigma3, Sigma3}};
+        cout<<" loop sigma"<<endl;
     
-            auto start = chrono::steady_clock::now();
  
     // for (int t2 : t2Vec)
-    for (double R1t2 : R1t2Vec)
+    for (double R1t2_ptch1 : R1t2Vec[0])
     {
-            for (int deltat : deltatVec)
+        for (double R1t2_ptch2 : R1t2Vec[1])
         {
-            // int t3 = t2 + deltat;
-            //auto start = chrono::steady_clock::now();
-            std::vector<std::array<int,3>> Infc_patch(num_patches, std::array<int,3>{0,0,0});
-            std::vector<std::array<double,3>> lambda_patch(num_patches, {0.0,0.0,0.0});
+            // double R1t2[2]={R1t2_ptch1,R1t2_ptch2};
+            cout<<" loop R1t2_ptch1"<<endl;
 
-            for (int itrC = 0; itrC < itr; itrC++)
-            {   
-                int Nseeds[NStrain] = {I0_1, 0, 0};
-                
-                for(int ptch_ind = 0; ptch_ind < num_patches; ptch_ind++)
-                {
-                    InitializingSeeds2(NNode, NStrain,Nseeds, patches[ptch_ind].Nodes.data());
-                }
-                //InitializingSeeds2(NNode, NStrain, Nseeds, patch.Nodes.data(), true);
-                int timestep = 0;
-                int NofInfc_total = I0_1 + I0_2 + I0_3;
-                int N_R1 = 0;
-                std::vector<double> P_R1(num_patches, 0.0);
-                int t2 = 0;
-                int t3 = t2 + deltat;
-                std::vector<int> flag_emerge2(num_patches, 0);
-                std::vector<int> flag_emerge3(num_patches, 0);
-                int flag_shuffled = 1;
-                
-                // std::array<int, 3> SelEdgeToTrack = EdgeListToShuffle[0];
-                // cout<<SelEdgeToTrack[0]<<"-"<<SelEdgeToTrack[1]<<" ("<<SelEdgeToTrack[2]<<")"<<"\n";
-                // cout <<"t= "<<timestep<<": ";
-                // for (int v : Nodes[SelEdgeToTrack[0]].adjList)
-                // {
-                //     cout <<v<<", ";
-                // }
-                // cout<<endl;
-                
-                //int SSS0 = NNode - NofInfc;
-                while (NofInfc_total > 0 && timestep < 1000)
+            for (int deltat : deltatVec)
+            {
+                // int t3 = t2 + deltat;
+                //auto start = chrono::steady_clock::now();
+                std::vector<std::array<int,3>> Infc_patch(num_patches, std::array<int,3>{0,0,0});
+                std::vector<std::array<double,3>> lambda_patch(num_patches, {0.0,0.0,0.0});
+                cout<<" loop deltat"<<endl;
+
+                for (int itrC = 0; itrC < global_params.itr; itrC++)
                 {   
-                    NofInfc_total = 0;
-                    std::fill(Infc_patch.begin(), Infc_patch.end(), std::array<int,3>{0,0,0});
-                    std::fill(lambda_patch.begin(), lambda_patch.end(), std::array<double,3>{0.0,0.0,0.0});
-
-
-                    for (int ptch_ind = 0; ptch_ind < num_patches; ptch_ind++)
+                    for(int ptch_ind = 0; ptch_ind < num_patches; ptch_ind++)
                     {
-                        Patch &patch = patches[ptch_ind];   // convenient alias
+                        int Nseeds[NStrain] = {patch_params[ptch_ind].Init[0], 0, 0};
+                        // int Nseeds[NStrain] = {I0_1, 0, 0};
 
-                        // Emerge new strains
-                        //int SSS1 = State_current[IndxSSS];
-                        // if (timestep == t2 && flag_emerge2 == 0)  
-                        if (P_R1[ptch_ind] >= R1t2 && flag_emerge2[ptch_ind] == 0)                   
+                        InitializingSeeds2(NNode, NStrain,Nseeds, patches[ptch_ind].Nodes.data());
+                    }
+                    //InitializingSeeds2(NNode, NStrain, Nseeds, patch.Nodes.data(), true);
+                    int timestep = 0;
+                    int NofInfc_total = 0;
+                    // int NofInfc_total = I0_1+I0_2+I0_3;
+
+                    for(int ptch_ind = 0; ptch_ind < num_patches; ptch_ind++) 
+                    {
+                        NofInfc_total += patch_params[ptch_ind].Init[0]+patch_params[ptch_ind].Init[1]+patch_params[ptch_ind].Init[2];
+                    }
+                    int N_R1 = 0;
+                    std::vector<double> P_R1(num_patches, 0.0);
+                    int t2 = 0;
+                    int t3 = t2 + deltat;
+                    std::vector<int> flag_emerge2(num_patches, 0);
+                    std::vector<int> flag_emerge3(num_patches, 0);
+                    int flag_shuffled = 1;
+                    //  cout<<" loop itr"<<endl;
+                    
+                    while (NofInfc_total > 0 && timestep < 1000)
+                    {   
+                        NofInfc_total = 0;
+                        std::fill(Infc_patch.begin(), Infc_patch.end(), std::array<int,3>{0,0,0});
+                        std::fill(lambda_patch.begin(), lambda_patch.end(), std::array<double,3>{0.0,0.0,0.0});
+                        // cout<<" loop time"<<endl;
+
+                        for (int ptch_ind = 0; ptch_ind < num_patches; ptch_ind++)
                         {
-                            if (flag_shuffled == 0 )
+                            Patch &patch = patches[ptch_ind];   // convenient alias
+                            // Emerge new strains
+                            //R1t2[ptch_ind]
+                            if (P_R1[ptch_ind] >= R1t2_ptch1 && flag_emerge2[ptch_ind] == 0)                   
                             {
-                                ShuffleStatus(patch.ListofNode, patch.Nodes.data(), NSampleShuffling);
-                                flag_shuffled = 1;
-                            }
-                            t2 = timestep;
-                            int Nseeds[NStrain] = {0, I0_2, 0};
-                            InitializingSeeds2(NNode, NStrain, Nseeds, patch.Nodes.data(), false);
-                            flag_emerge2[ptch_ind] = 1;
-                            //cout << timestep << " flag2: " << R0_1 << " " << SSS0 << endl;
-                        }
-                        //if (((double)SSS1 / (double)SSS0) < (1 / (pt2 * R0_12)) && flag_emerge2 == 1 && flag_emerge3 == 0)
-                        // if (timestep == t3 && flag_emerge3 == 0)
-                        t3 = t2 + deltat;
-                        if (P_R1[ptch_ind] >= R1t2 && timestep == t3 && flag_emerge3[ptch_ind] == 0)
-                        {
-                            if (flag_shuffled == 0 )
-                            {
-                                ShuffleStatus(patch.ListofNode, patch.Nodes.data(), NSampleShuffling);
-                                flag_shuffled = 1;
-                            }      
-                            t3 = timestep;
-                            int Nseeds[NStrain] = {0, 0, I0_3};
-                            InitializingSeeds2(NNode, NStrain, Nseeds, patch.Nodes.data(), false);
-                            flag_emerge3[ptch_ind] = 1;
-                            //cout << timestep<< " flag3: "<<R0_12<<" "<< SSS1 <<" "<<SSS0<< endl;
-                        }   
-
-                        // Compute and recorde the current Status:
-
-                        State_current.assign(State_current.size(), 0);
-                        State_current[0] = itrC;
-                        State_current[1] = timestep;
-                        State_current[2] = ptch_ind;
-
-                        for (int i = 0; i < patch.NNodes; i++)
-                        {
-                            int Status_o = MapState2Index[patch.Nodes[i].Status_old[0]][patch.Nodes[i].Status_old[1]][patch.Nodes[i].Status_old[2]];
-                            int Status_n = MapState2Index[patch.Nodes[i].Status[0]][patch.Nodes[i].Status[1]][patch.Nodes[i].Status[2]];
-                            bool StatusChange = (Status_o != Status_n);
-                            double alpha_Ik = 1;
-                            for (int kk = 0; kk < NStrain; kk++)
-                            {
-                                if (patch.Nodes[i].Status[kk] == 1)
+                                if (flag_shuffled == 0 )
                                 {
-                                    alpha_Ik = 0;
-                                    break;
+                                    ShuffleStatus(patch.ListofNode, patch.Nodes.data(), NSampleShuffling);
+                                    flag_shuffled = 1;
                                 }
+                                t2 = timestep;
+                                int Nseeds[NStrain] = {0, patch_params[ptch_ind].Init[1], 0};
+                                // int Nseeds[NStrain] = {0, I0_2, 0};
+                                InitializingSeeds2(NNode, NStrain, Nseeds, patch.Nodes.data(), false);
+                                flag_emerge2[ptch_ind] = 1;
                             }
-                            bool existsI = (alpha_Ik == 0);
-                            if ((StatusChange && existsI) || (timestep == 0 && existsI) )
+                            t3 = t2 + deltat;
+                            if (P_R1[ptch_ind] >= R1t2_ptch1 && timestep == t3 && flag_emerge3[ptch_ind] == 0)
                             {
-                                int Infector = patch.Nodes[i].Infector;
-                                int Status_Infctor;
-                                if (Infector != -1){
-                                Status_Infctor = MapState2Index[patch.Nodes[Infector].Status_old[0]][patch.Nodes[Infector].Status_old[1]][patch.Nodes[Infector].Status_old[2]];
-                                }
-                                else{
-                                Status_Infctor = -1;    
-                                }
+                                if (flag_shuffled == 0 )
+                                {
+                                    ShuffleStatus(patch.ListofNode, patch.Nodes.data(), NSampleShuffling);
+                                    flag_shuffled = 1;
+                                }      
+                                t3 = timestep;
+                                int Nseeds[NStrain] = {0, 0, patch_params[ptch_ind].Init[2]};
+                                // int Nseeds[NStrain] = {0, 0, I0_3};
+
+                                InitializingSeeds2(NNode, NStrain, Nseeds, patch.Nodes.data(), false);
+                                flag_emerge3[ptch_ind] = 1;
                                 
-                                // Recording the transmition track
-                                if (ProduceEventMatix)
+                            }   
+
+                            // Compute and recorde the current Status:
+
+                            State_current.assign(State_current.size(), 0);
+                            State_current[0] = itrC;
+                            State_current[1] = timestep;
+                            State_current[2] = ptch_ind;
+
+                            for (int i = 0; i < patch.NNodes; i++)
+                            {
+                                int Status_o = MapState2Index[patch.Nodes[i].Status_old[0]][patch.Nodes[i].Status_old[1]][patch.Nodes[i].Status_old[2]];
+                                int Status_n = MapState2Index[patch.Nodes[i].Status[0]][patch.Nodes[i].Status[1]][patch.Nodes[i].Status[2]];
+                                bool StatusChange = (Status_o != Status_n);
+                                double alpha_Ik = 1;
+                                for (int kk = 0; kk < NStrain; kk++)
                                 {
-                                    Res_TransmitionTrack = {itrC, timestep,ptch_ind, i, Status_o, Status_n, Infector, Status_Infctor};
-                                    Res_TransmitionTrack_table.push_back(Res_TransmitionTrack);
+                                    if (patch.Nodes[i].Status[kk] == 1)
+                                    {
+                                        alpha_Ik = 0;
+                                        break;
+                                    }
                                 }
-                                int Ind2 = MapStateIndx2ColIndx2[Status_n];
-                                State_current[Ind2] += 1;
+                                bool existsI = (alpha_Ik == 0);
+                                if ((StatusChange && existsI) || (timestep == 0 && existsI) )
+                                {
+                                    int Infector = patch.Nodes[i].Infector;
+                                    int Status_Infctor;
+                                    if (Infector != -1){
+                                    Status_Infctor = MapState2Index[patch.Nodes[Infector].Status_old[0]][patch.Nodes[Infector].Status_old[1]][patch.Nodes[Infector].Status_old[2]];
+                                    }
+                                    else{
+                                    Status_Infctor = -1;    
+                                    }
+                                    
+                                    // Recording the transmition track
+                                    if (ProduceEventMatix)
+                                    {
+                                        Res_TransmitionTrack = {itrC, timestep,ptch_ind, i, Status_o, Status_n, Infector, Status_Infctor};
+                                        Res_TransmitionTrack_table.push_back(Res_TransmitionTrack);
+                                    }
+                                    int Ind2 = MapStateIndx2ColIndx2[Status_n];
+                                    State_current[Ind2] += 1;
+                                }
+                                int Ind1 = MapStateIndx2ColIndx1[Status_n];
+                                State_current[Ind1] += 1;
                             }
-                            int Ind1 = MapStateIndx2ColIndx1[Status_n];
-                            State_current[Ind1] += 1;
-                        }
-                        Res_timeserie_table.push_back(State_current);
+                            Res_timeserie_table.push_back(State_current);
 
-                        // Update the old status with the current status and prepare to compute the next step.
-                        for (size_t i = 0; i < NNode; i++)
-                        {
-                            for (int k = 0; k < NStrain; k++)
+                            // Update the old status with the current status and prepare to compute the next step.
+                            for (size_t i = 0; i < NNode; i++)
                             {
-                                patch.Nodes[i].Status_old[k] = patch.Nodes[i].Status[k];
+                                for (int k = 0; k < NStrain; k++)
+                                {
+                                    patch.Nodes[i].Status_old[k] = patch.Nodes[i].Status[k];
+                                }
                             }
+
+                            for (int s : InfectedStatus)
+                            { 
+                                NofInfc_total += State_current[MapStateIndx2ColIndx1[s]];
+                            }
+                            Infc_patch[ptch_ind] = {
+                            State_current[IndxISS]+State_current[IndxIRS]+State_current[IndxISR]+State_current[IndxIRR],
+                            State_current[IndxSIS]+State_current[IndxRIS]+State_current[IndxSIR]+State_current[IndxRIR],
+                            State_current[IndxSSI]+State_current[IndxRSI]+State_current[IndxSRI]+State_current[IndxRRI] };
+
+                            N_R1 = State_current[IndxRSS]+State_current[IndxRIS]+State_current[IndxRSI]+State_current[IndxRRS]+State_current[IndxRRI]+State_current[IndxRSR]+State_current[IndxRIR]+State_current[IndxRRR];
+                            P_R1[ptch_ind] = (double)N_R1 / (double)NNode; 
                         }
 
-                        for (int s : InfectedStatus)
-                        { 
-                            NofInfc_total += State_current[MapStateIndx2ColIndx1[s]];
-                        }
-                        Infc_patch[ptch_ind] = {
-                        State_current[IndxISS]+State_current[IndxIRS]+State_current[IndxISR]+State_current[IndxIRR],
-                        State_current[IndxSIS]+State_current[IndxRIS]+State_current[IndxSIR]+State_current[IndxRIR],
-                        State_current[IndxSSI]+State_current[IndxRSI]+State_current[IndxSRI]+State_current[IndxRRI] };
-
-                        N_R1 = State_current[IndxRSS]+State_current[IndxRIS]+State_current[IndxRSI]+State_current[IndxRRS]+State_current[IndxRRI]+State_current[IndxRSR]+State_current[IndxRIR]+State_current[IndxRRR];
-                        P_R1[ptch_ind] = (double)N_R1 / (double)NNode; 
-                    }
-
-                    for (int ptch_i = 0; ptch_i < num_patches; ptch_i++)
-                    {
-                        for (int ptch_j = 0; ptch_j < num_patches; ptch_j++)
+                        for (int ptch_i = 0; ptch_i < num_patches; ptch_i++)
                         {
-                            if(ptch_i==ptch_j) continue;
-                            for (int k = 0; k < NStrain; k++)
+                            for (int ptch_j = 0; ptch_j < num_patches; ptch_j++)
                             {
-                                lambda_patch[ptch_i][k] += mobility[ptch_j][ptch_i] * ((double)Infc_patch[ptch_j][k] / patches[ptch_j].NNodes);
+                                if(ptch_i==ptch_j) continue;
+                                for (int k = 0; k < NStrain; k++)
+                                {
+                                    lambda_patch[ptch_i][k] += mobility[ptch_j][ptch_i] * ((double)Infc_patch[ptch_j][k] / patches[ptch_j].NNodes);
+                                }
                             }
                         }
-                    }
-                    timestep += 1;
-                    // Compute the next status and update the current status:
-                    for (int ptch_ind = 0; ptch_ind < num_patches; ptch_ind++)
-                    {
-                        Patch &patch = patches[ptch_ind]; 
-                        MultiStrainSIRonNet(beta, mu, Sigma, patch.NNodes, patch.ListofNode, patch.Nodes.data(), strain_order, lambda_patch[ptch_ind]);
-
-                        if (p_ShuffleEdge>0)
+                        timestep += 1;
+                        // Compute the next status and update the current status:
+                        for (int ptch_ind = 0; ptch_ind < num_patches; ptch_ind++)
                         {
-                            // ShufflingEdges(p_ShuffleEdge, EdgeListType2 ,NNode, Nodes ,Nodes_org);
-                            // ShufflingEdges(1, EdgeListToShuffle ,NNode, Nodes ,Nodes_org);
-                            ShufflingEdges2(1, EdgeListToShuffle , patch.Nodes.data());
-                        } 
-                    }
+                            Patch &patch = patches[ptch_ind]; 
+                            MultiStrainSIRonNet(beta, mu, Sigma, patch.NNodes, patch.ListofNode, patch.Nodes.data(), strain_order, lambda_patch[ptch_ind]);
 
-                    // cout <<"t= "<<timestep<<": ";
-                    // for (int v : Nodes[SelEdgeToTrack[0]].adjList)
-                    // {
-                    //     cout << v<<", ";
-                    // } 
-                    // cout << endl;
-                        
-                  
-                }
-                // reseting the network to the orginal one and selecting a new set of random link (this part is for the second method of shuffling links)
-                // 
-                if (p_ShuffleEdge>0)
-                {
-                    EdgeListToShuffle.clear();
-                    random_sample(EdgeListType2.begin(), EdgeListType2.end(), NEdgetoSuffle);
-                    for (size_t ei = 0; ei < NEdgetoSuffle; ei++){
-                        EdgeListToShuffle.push_back(EdgeListType2[ei]);
-                    };
-                    for (int ptch_ind = 0; ptch_ind < num_patches; ptch_ind++)
+                            if (global_params.p_ShuffleEdge>0)
+                            {
+                                // ShufflingEdges(p_ShuffleEdge, EdgeListType2 ,NNode, Nodes ,Nodes_org);
+                                // ShufflingEdges(1, EdgeListToShuffle ,NNode, Nodes ,Nodes_org);
+                                ShufflingEdges2(1, EdgeListToShuffle , patch.Nodes.data());
+                            } 
+                        }
+                    
+                    }
+                    // reseting the network to the orginal one and selecting a new set of random link (this part is for the second method of shuffling links)
+                    // 
+                    if (global_params.p_ShuffleEdge>0)
                     {
-                        for (size_t nodei = 0; nodei < NNode; nodei++){
-                            patches[ptch_ind].Nodes[nodei].adjList = Nodes_org[nodei].adjList;
+                        EdgeListToShuffle.clear();
+                        random_sample(EdgeListType2.begin(), EdgeListType2.end(), NEdgetoSuffle);
+                        for (size_t ei = 0; ei < NEdgetoSuffle; ei++){
+                            EdgeListToShuffle.push_back(EdgeListType2[ei]);
                         };
+                        for (int ptch_ind = 0; ptch_ind < num_patches; ptch_ind++)
+                        {
+                            for (size_t nodei = 0; nodei < NNode; nodei++){
+                                patches[ptch_ind].Nodes[nodei].adjList = Nodes_org[nodei].adjList;
+                            };
+                        }
                     }
+
+
                 }
 
-
-            }
-
-            if (ProduceEventMatix)
-            {
-                for (int itt = 0; itt < Res_TransmitionTrack_table.size(); ++itt)
+                if (ProduceEventMatix)
                 {
-                    file1 << r2 << "," << Sigma3<<",";
-                    // file1 << t2 << "," <<t3;
-                    file1 << R1t2 << "," <<deltat;
-                    for (int ittt = 0; ittt < Res_TransmitionTrack_table[0].size(); ittt++)
+                    for (int itt = 0; itt < Res_TransmitionTrack_table.size(); ++itt)
                     {
-                        file1 << "," << Res_TransmitionTrack_table[itt][ittt];
+                        file1 << r2 << "," << Sigma3<<",";
+                        // file1 << t2 << "," <<t3;
+                        file1 << R1t2_ptch1 << "," << R1t2_ptch1 << "," <<deltat;
+                        for (int ittt = 0; ittt < Res_TransmitionTrack_table[0].size(); ittt++)
+                        {
+                            file1 << "," << Res_TransmitionTrack_table[itt][ittt];
+                        }
+                        file1 << "\n";
                     }
-                    file1 << "\n";
                 }
-            }
-            for (int itt = 0; itt < Res_timeserie_table.size(); ++itt)
-            {
-                file2 << r2 << "," << Sigma3<<",";
-                // file2 << t2 << "," <<t3;
-                file2 << R1t2 << "," <<deltat;
-                for (int ittt = 0; ittt < Res_timeserie_table[0].size(); ittt++)
+                for (int itt = 0; itt < Res_timeserie_table.size(); ++itt)
                 {
-                    file2 << "," << Res_timeserie_table[itt][ittt];
+                    file2 << r2 << "," << Sigma3<<",";
+                    // file2 << t2 << "," <<t3;
+                    file2 << R1t2_ptch1 << "," <<R1t2_ptch1 << "," <<deltat;
+                    for (int ittt = 0; ittt < Res_timeserie_table[0].size(); ittt++)
+                    {
+                        file2 << "," << Res_timeserie_table[itt][ittt];
+                    }
+                    file2 << "\n";
                 }
-                file2 << "\n";
+
+                Res_timeserie_table.clear();
+                Res_TransmitionTrack_table.clear();
+
+                /*auto end = chrono::steady_clock::now();
+                auto diff = end - start;
+                cout << "t2: "<< t2 << ", t3: " << t3 << ", run time: " << chrono::duration<double>(diff).count() << "s" << endl;*/
             }
-
-            Res_timeserie_table.clear();
-            Res_TransmitionTrack_table.clear();
-
-            /*auto end = chrono::steady_clock::now();
-            auto diff = end - start;
-            cout << "t2: "<< t2 << ", t3: " << t3 << ", run time: " << chrono::duration<double>(diff).count() << "s" << endl;*/
         }
     }
             auto end = chrono::steady_clock::now();
@@ -979,126 +1033,258 @@ void ShufflingEdges2(double p, vector <std::array<int, 3>>& EdgeList2 ,Vertex No
 
 
     
-void ReadParameters(string FilePath,double parameters[])
-{
-    std::ifstream infile (FilePath);    // Load the file stream
-    std::string line;                  // A line of values from text
-    std::stringstream splitter;        // Prepare a stringstream as a splitter (splits on spaces) for reading key/values from a line
+// void ReadParameters(string FilePath,double parameters[])
+// {
+//     std::ifstream infile (FilePath);    // Load the file stream
+//     std::string line;                  // A line of values from text
+//     std::stringstream splitter;        // Prepare a stringstream as a splitter (splits on spaces) for reading key/values from a line
     
-    // Make sure we can read the stream
-    if (infile) {
-        // As long as there are lines of data, we read the file
-        while (std::getline(infile, line)) {
-            string VariableName ;
-            double tempDoublValue;
-            splitter << line;           // Load line into splitter
-            //cout << line << endl ;           
-            splitter >> VariableName;         // Read the key back into temporary
+//     // Make sure we can read the stream
+//     if (infile) {
+//         // As long as there are lines of data, we read the file
+//         while (std::getline(infile, line)) {
+//             string VariableName ;
+//             double tempDoublValue;
+//             splitter << line;           // Load line into splitter
+//             //cout << line << endl ;           
+//             splitter >> VariableName;         // Read the key back into temporary
            
-            if(VariableName=="beta1"){
-                splitter >> tempDoublValue;   
-                double beta_1 = tempDoublValue ;
-                parameters[0] = beta_1;
-            } else if(VariableName=="mu1"){
-                splitter >> tempDoublValue;   
-                double mu_1 = tempDoublValue ;
-                parameters[1] = mu_1;
-            }else if (VariableName=="r2"){
-                splitter >> tempDoublValue; 
-                double r2_s = tempDoublValue ;
-                splitter >> tempDoublValue; 
-                double r2_e = tempDoublValue ;
-                splitter >> tempDoublValue; 
-                double r2_step = tempDoublValue ;
-                parameters[2] = r2_s;
-                parameters[3] = r2_e;
-                parameters[4] = r2_step;
-            } else if (VariableName=="tau2"){
-                splitter >> tempDoublValue;   
-                double tau2 = tempDoublValue ;
-                parameters[5] = tau2;
-            }else if (VariableName=="r3"){
-                splitter >> tempDoublValue;   
-                double r3 = tempDoublValue ;
-                parameters[6] = r3;
-            } else if (VariableName=="tau3"){
-                splitter >> tempDoublValue;   
-                double tau3 = tempDoublValue ;
-                parameters[7] = tau3;
-            }else if (VariableName=="sigma2"){
-                splitter >> tempDoublValue;   
-                double sigma2 = tempDoublValue ;
-                parameters[8] = sigma2;
-            }else if (VariableName=="sigma3"){
-                splitter >> tempDoublValue; 
-                double sigma3_s = tempDoublValue ;
-                splitter >> tempDoublValue; 
-                double sigma3_e = tempDoublValue ;
-                splitter >> tempDoublValue; 
-                double sigma3_step = tempDoublValue ;
-                parameters[9] = sigma3_s;
-                parameters[10] = sigma3_e;
-                parameters[11] = sigma3_step;
-            }else if (VariableName=="R1t2"){
-                splitter >> tempDoublValue; 
-                double r1t2_s = tempDoublValue ;
-                splitter >> tempDoublValue; 
-                double r1t2_e = tempDoublValue ;
-                splitter >> tempDoublValue; 
-                double r1t2_step = tempDoublValue ;
-                parameters[12] = r1t2_s;
-                parameters[13] = r1t2_e;
-                parameters[14] = r1t2_step;
-            // }else if (VariableName=="t2"){
-                // splitter >> tempDoublValue; 
-                // double t2_s = tempDoublValue ;
-                // splitter >> tempDoublValue; 
-                // double t2_e = tempDoublValue ;
-                // splitter >> tempDoublValue; 
-                // double t2_step = tempDoublValue ;
-                // parameters[12] = t2_s;
-                // parameters[13] = t2_e;
-                // parameters[14] = t2_step;
-            }else if (VariableName=="deltat"){
-                splitter >> tempDoublValue; 
-                double deltat_s = tempDoublValue ;
-                splitter >> tempDoublValue; 
-                double deltat_e = tempDoublValue ;
-                splitter >> tempDoublValue; 
-                double deltat_step = tempDoublValue ;
-                parameters[15] = deltat_s;
-                parameters[16] = deltat_e;
-                parameters[17] = deltat_step;
-            }else if (VariableName=="Iinit"){
-                splitter >> tempDoublValue; 
-                double I0_1 = tempDoublValue ;
-                splitter >> tempDoublValue; 
-                double I0_2 = tempDoublValue ;
-                splitter >> tempDoublValue; 
-                double I0_3 = tempDoublValue ;
-                parameters[18] = I0_1;
-                parameters[19] = I0_2;
-                parameters[20] = I0_3;
-            }else if (VariableName=="p_ShuffleEdge"){
-                splitter >> tempDoublValue; 
-                double p_ShuffleEdge = tempDoublValue ;
-                parameters[21] = p_ShuffleEdge;
-            }else if (VariableName=="itr"){
-                splitter >> tempDoublValue; 
-                double itr = tempDoublValue ;
-                parameters[22] = itr;
-            }else {
-                std::cout<<"Can not read all parameters from the config file. Please enter the parameters with the following keys:" << endl;
-                std::cout<<"beta1, mu1, r2, tau2, r3, tau3, sigma3, R1t2, deltat, Iinit, p_ShuffleEdge, itr \n" << endl;
-                break;
-            }
-            splitter.clear();           // Clear for next line   
+//             if(VariableName=="beta1"){
+//                 splitter >> tempDoublValue;   
+//                 double beta_1 = tempDoublValue ;
+//                 parameters[0] = beta_1;
+//             } else if(VariableName=="mu1"){
+//                 splitter >> tempDoublValue;   
+//                 double mu_1 = tempDoublValue ;
+//                 parameters[1] = mu_1;
+//             }else if (VariableName=="r2"){
+//                 splitter >> tempDoublValue; 
+//                 double r2_s = tempDoublValue ;
+//                 splitter >> tempDoublValue; 
+//                 double r2_e = tempDoublValue ;
+//                 splitter >> tempDoublValue; 
+//                 double r2_step = tempDoublValue ;
+//                 parameters[2] = r2_s;
+//                 parameters[3] = r2_e;
+//                 parameters[4] = r2_step;
+//             } else if (VariableName=="tau2"){
+//                 splitter >> tempDoublValue;   
+//                 double tau2 = tempDoublValue ;
+//                 parameters[5] = tau2;
+//             }else if (VariableName=="r3"){
+//                 splitter >> tempDoublValue;   
+//                 double r3 = tempDoublValue ;
+//                 parameters[6] = r3;
+//             } else if (VariableName=="tau3"){
+//                 splitter >> tempDoublValue;   
+//                 double tau3 = tempDoublValue ;
+//                 parameters[7] = tau3;
+//             }else if (VariableName=="sigma2"){
+//                 splitter >> tempDoublValue;   
+//                 double sigma2 = tempDoublValue ;
+//                 parameters[8] = sigma2;
+//             }else if (VariableName=="sigma3"){
+//                 splitter >> tempDoublValue; 
+//                 double sigma3_s = tempDoublValue ;
+//                 splitter >> tempDoublValue; 
+//                 double sigma3_e = tempDoublValue ;
+//                 splitter >> tempDoublValue; 
+//                 double sigma3_step = tempDoublValue ;
+//                 parameters[9] = sigma3_s;
+//                 parameters[10] = sigma3_e;
+//                 parameters[11] = sigma3_step;
+//             }else if (VariableName=="R1t2"){
+//                 splitter >> tempDoublValue; 
+//                 double r1t2_s = tempDoublValue ;
+//                 splitter >> tempDoublValue; 
+//                 double r1t2_e = tempDoublValue ;
+//                 splitter >> tempDoublValue; 
+//                 double r1t2_step = tempDoublValue ;
+//                 parameters[12] = r1t2_s;
+//                 parameters[13] = r1t2_e;
+//                 parameters[14] = r1t2_step;
+//             }else if (VariableName=="deltat"){
+//                 splitter >> tempDoublValue; 
+//                 double deltat_s = tempDoublValue ;
+//                 splitter >> tempDoublValue; 
+//                 double deltat_e = tempDoublValue ;
+//                 splitter >> tempDoublValue; 
+//                 double deltat_step = tempDoublValue ;
+//                 parameters[15] = deltat_s;
+//                 parameters[16] = deltat_e;
+//                 parameters[17] = deltat_step;
+//             }else if (VariableName=="Iinit"){
+//                 splitter >> tempDoublValue; 
+//                 double I0_1 = tempDoublValue ;
+//                 splitter >> tempDoublValue; 
+//                 double I0_2 = tempDoublValue ;
+//                 splitter >> tempDoublValue; 
+//                 double I0_3 = tempDoublValue ;
+//                 parameters[18] = I0_1;
+//                 parameters[19] = I0_2;
+//                 parameters[20] = I0_3;
+//             }else if (VariableName=="p_mobility"){
+//                 splitter >> tempDoublValue; 
+//                 double p_mobility = tempDoublValue ;
+//                 parameters[21] = p_mobility;
+//             }else if (VariableName=="p_ShuffleEdge"){
+//                 splitter >> tempDoublValue; 
+//                 double p_ShuffleEdge = tempDoublValue ;
+//                 parameters[22] = p_ShuffleEdge;
+//             }else if (VariableName=="itr"){
+//                 splitter >> tempDoublValue; 
+//                 double itr = tempDoublValue ;
+//                 parameters[23] = itr;
+//             }else {
+//                 std::cout<<"Can not read all parameters from the config file. Please enter the parameters with the following keys:" << endl;
+//                 std::cout<<"beta1, mu1, r2, tau2, r3, tau3, sigma3, R1t2, deltat, Iinit,p_mobility, p_ShuffleEdge, itr \n" << endl;
+//                 break;
+//             }
+//             splitter.clear();           // Clear for next line   
+//         }
+
+//     }
+//     else {
+//         // The file was not found or locked, etc...
+//         std::cout << "Unable to open file: " << FilePath << std::endl;
+//         exit(1);
+//     }
+// }
+void ReadParameters(const std::string& FilePath, GlobalParams& global, std::vector<PatchParams>& patch_params)
+{
+    std::ifstream infile(FilePath);
+
+    if (!infile)
+    {
+        std::cout << "Unable to open config file: " << FilePath << std::endl;
+        exit(1);
+    }
+
+    std::string line;
+    std::string key;
+
+    bool read_Init = false;
+    bool read_R1t2 = false;
+
+    std::vector<std::array<int,3>> Init_list;
+    std::vector<std::array<double,3>> R1t2_list;
+
+    while (std::getline(infile, line))
+    {
+        if(line.empty() || line[0]=='#')
+            continue;
+
+        std::stringstream ss(line);
+        ss >> key;
+
+        // ---------- GLOBAL PARAMETERS ----------
+
+        if(key=="beta1")
+            ss >> global.beta1;
+        else if(key=="mu1")
+            ss >> global.mu1;
+        else if(key=="tau2")
+            ss >> global.tau2;
+        else if(key=="tau3")
+            ss >> global.tau3;
+        else if(key=="r2")
+            ss >> global.r2_s >> global.r2_e >> global.r2_step;
+        else if(key=="r3")
+            ss >> global.r3;
+        else if(key=="sigma2")
+            ss >> global.sigma2;
+        else if(key=="sigma3")
+            ss >> global.sigma3_s >> global.sigma3_e >> global.sigma3_step;
+        else if(key=="deltat")
+            ss >> global.deltat_s >> global.deltat_e >> global.deltat_step;
+        else if(key=="p_mobility")
+            ss >> global.p_mobility;
+        else if(key=="p_ShuffleEdge")
+            ss >> global.p_ShuffleEdge;
+        else if(key=="itr")
+            ss >> global.itr;
+
+        // ---------- PATCH BLOCKS ----------
+
+        else if(key=="Init:")
+        {
+            read_Init = true;
+            read_R1t2 = false;
+            continue;
         }
 
+        else if(key=="R1t2:")
+        {
+            read_R1t2 = true;
+            read_Init = false;
+            continue;
+        }
+
+        // ---------- PATCH DATA ----------
+
+        else
+        {
+            if(read_Init)
+            {
+                std::stringstream s2(line);
+                std::array<int,3> temp;
+                s2 >> temp[0] >> temp[1] >> temp[2];
+                Init_list.push_back(temp);
+            }
+            else if(read_R1t2)
+            {
+                std::stringstream s2(line);
+                std::array<double,3> temp;
+                s2 >> temp[0] >> temp[1] >> temp[2];
+                R1t2_list.push_back(temp);
+            }
+        }
     }
-    else {
-        // The file was not found or locked, etc...
-        std::cout << "Unable to open file: " << FilePath << std::endl;
+
+    // ---------- BUILD PATCH STRUCTS ----------
+
+    size_t num_patches = Init_list.size();
+    patch_params.resize(num_patches);
+
+    for(size_t p = 0; p < num_patches; p++)
+    {
+        patch_params[p].Init = Init_list[p];
+        if(p < R1t2_list.size())
+            patch_params[p].R1t2 = R1t2_list[p];
+    }
+}
+
+void ReadNetworkPaths(const std::string& FilePath, std::vector<PatchParams>& patch_params)
+{
+    std::ifstream infile(FilePath);
+    if (!infile)
+    {
+        std::cout << "Unable to open network list file: "
+        << FilePath << std::endl;
         exit(1);
+    }
+
+    std::string line;
+    int patch_index = 0;
+
+    while (std::getline(infile, line))
+    {
+        if(line.empty() || line[0]=='#')
+        continue;
+
+        if(patch_index >= patch_params.size())
+        {
+        std::cout << "Number of patches is "<<patch_params.size()<<". More network files than patches defined in config.\n";
+        exit(1);
+        }
+
+        patch_params[patch_index].network_file = line;
+        patch_index++;
+    }
+
+    if(patch_index < patch_params.size())
+    {
+    std::cout << "Warning:"<<" number of patches is "<<patch_params.size()<<", fewer network files than patches. "
+    << "Some patches will keep empty network_file.\n";
     }
 }
