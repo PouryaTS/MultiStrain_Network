@@ -351,7 +351,7 @@ int main(int argc, char** argv)
     vector<double> sigma3Vec;
     std::vector<vector<double>> R1t2Vec(2);
     vector<int> deltatVec;
-    cout<<"vec alocation"<<endl;
+    // cout<<"vec alocation"<<endl;
 
     for (double ri = global_params.r2_s; ri < global_params.r2_e; ri += global_params.r2_step){rVec.push_back(ri);}
     for (double sigmai = global_params.sigma3_s; sigmai <= global_params.sigma3_e; sigmai += global_params.sigma3_step){sigma3Vec.push_back(sigmai);}
@@ -360,7 +360,7 @@ int main(int argc, char** argv)
     // for (double r1t2i = r1t2_s; r1t2i <r1t2_e; r1t2i += r1t2_step){R1t2Vec[0].push_back(r1t2i);}
     // for (double r1t2i = r1t2_s; r1t2i <r1t2_e; r1t2i += r1t2_step){R1t2Vec[1].push_back(r1t2i);}
     for (int ti = global_params.deltat_s; ti < global_params.deltat_e; ti += global_params.deltat_step){deltatVec.push_back(ti);}
-    cout<<"vec alocation end"<<endl;
+    // cout<<"vec alocation end"<<endl;
 
     int NSampleShuffling = 20000;
     int NEdgeType2 = EdgeListType2.size();
@@ -376,11 +376,11 @@ int main(int argc, char** argv)
     }
 
     auto start = chrono::steady_clock::now();
-    cout<<"loop start"<<endl;
+    // cout<<"loop start"<<endl;
     
     for (double r2 : rVec)
     {       
-        cout<<" loop rVecend"<<endl;
+        // cout<<" loop rVecend"<<endl;
 
         for (double Sigma3 : sigma3Vec)
         {
@@ -398,7 +398,7 @@ int main(int argc, char** argv)
                 {Sigma12, Sigma12, Sigma3},
                 {Sigma12, Sigma12, Sigma3},
                 {Sigma3, Sigma3, Sigma3}};
-        cout<<" loop sigma"<<endl;
+        // cout<<" loop sigma"<<endl;
     
  
     // for (int t2 : t2Vec)
@@ -407,7 +407,7 @@ int main(int argc, char** argv)
         for (double R1t2_ptch2 : R1t2Vec[1])
         {
             // double R1t2[2]={R1t2_ptch1,R1t2_ptch2};
-            cout<<" loop R1t2_ptch1"<<endl;
+            // cout<<" loop R1t2_ptch1"<<endl;
 
             for (int deltat : deltatVec)
             {
@@ -415,7 +415,7 @@ int main(int argc, char** argv)
                 //auto start = chrono::steady_clock::now();
                 std::vector<std::array<int,3>> Infc_patch(num_patches, std::array<int,3>{0,0,0});
                 std::vector<std::array<double,3>> lambda_patch(num_patches, {0.0,0.0,0.0});
-                cout<<" loop deltat"<<endl;
+                // cout<<" loop deltat"<<endl;
 
                 for (int itrC = 0; itrC < global_params.itr; itrC++)
                 {   
@@ -608,7 +608,7 @@ int main(int argc, char** argv)
                     {
                         file1 << r2 << "," << Sigma3<<",";
                         // file1 << t2 << "," <<t3;
-                        file1 << R1t2_ptch1 << "," << R1t2_ptch1 << "," <<deltat;
+                        file1 << R1t2_ptch1 << "," << R1t2_ptch2 << "," <<deltat;
                         for (int ittt = 0; ittt < Res_TransmitionTrack_table[0].size(); ittt++)
                         {
                             file1 << "," << Res_TransmitionTrack_table[itt][ittt];
@@ -620,7 +620,7 @@ int main(int argc, char** argv)
                 {
                     file2 << r2 << "," << Sigma3<<",";
                     // file2 << t2 << "," <<t3;
-                    file2 << R1t2_ptch1 << "," <<R1t2_ptch1 << "," <<deltat;
+                    file2 << R1t2_ptch1 << "," <<R1t2_ptch2 << "," <<deltat;
                     for (int ittt = 0; ittt < Res_timeserie_table[0].size(); ittt++)
                     {
                         file2 << "," << Res_timeserie_table[itt][ittt];
