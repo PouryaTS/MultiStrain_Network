@@ -9,7 +9,7 @@ Conf/
 .ipynb_checkpoints/
 .vscode/
 perf*
-
+*.ipynb
 
 # Prerequisites
 *.d

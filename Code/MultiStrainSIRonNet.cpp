@@ -193,17 +193,19 @@ int main(int argc, char** argv)
         }
     }
     
-    // double MeanDegree = 0; 
-    // for (int i = 0; i < NNode; i++)
-    // {
-    //     MeanDegree += patch.Nodes[i].adjList.size();
-    // }
-    // MeanDegree = MeanDegree / (double)NNode;
-    
+    std::vector<double> MeanDegree(num_patches,0.0);
+     for(int ptch_ind=0; ptch_ind<num_patches; ptch_ind++)
+        {         
+        for (int i = 0; i < patches[ptch_ind].NNodes; i++)
+        {
+            MeanDegree[ptch_ind] += patches[ptch_ind].Nodes[i].adjList.size();
+        }
+        MeanDegree[ptch_ind] =  MeanDegree[ptch_ind] / (double)patches[ptch_ind].NNodes;
+        }
+
     // for (size_t i = 0; i < NNode; i++){
     //     Nodes_org[i] = patch.Nodes[i];    
     //     };
-
     std::cout << "parameters: "<< endl;
     std::cout << "number of patches= "<< patch_params.size() << endl;
     std::cout << "beta1= "<<global_params.beta1<<",  mu1= "<<global_params.mu1<< endl;
@@ -344,6 +346,7 @@ int main(int argc, char** argv)
     int IndxRSR = MapStateIndx2ColIndx1[MapState2Index[2][0][2]];
     int IndxRRR = MapStateIndx2ColIndx1[MapState2Index[2][2][2]];
 
+    double mob_duration =1/3; 
     std::vector<std::vector<double>> mobility(num_patches, std::vector<double>(num_patches,0.0));
     mobility[0][1] = global_params.p_mobility;   // infection from patch0 → patch1
     mobility[1][0] = global_params.p_mobility;   // infection from patch1 → patch0
@@ -562,7 +565,7 @@ int main(int argc, char** argv)
                                 if(ptch_i==ptch_j) continue;
                                 for (int k = 0; k < NStrain; k++)
                                 {
-                                    lambda_patch[ptch_i][k] += mobility[ptch_j][ptch_i] * ((double)Infc_patch[ptch_j][k] / patches[ptch_j].NNodes);
+                                    lambda_patch[ptch_i][k] += (mobility[ptch_j][ptch_i]*MeanDegree[ptch_i]+mobility[ptch_i][ptch_j]*MeanDegree[ptch_j]) * mob_duration * ((double)Infc_patch[ptch_j][k] / patches[ptch_j].NNodes);
                                 }
                             }
                         }
