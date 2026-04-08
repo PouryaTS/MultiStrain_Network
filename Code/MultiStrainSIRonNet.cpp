@@ -214,8 +214,10 @@ int main(int argc, char** argv)
     std::cout << "sigma2= "<<global_params.sigma2<< endl;
     std::cout << "sigma3= "<<global_params.sigma3_s<<":"<<global_params.sigma3_e<<":"<<global_params.sigma3_step<< endl;
     // cout << "t2= "<<t2_s<<":"<<t2_e<<":"<<t2_step<<",  deltat= "<<deltat_s<<":"<<deltat_e<<":"<<deltat_step<< endl;
-    std::cout << "R1t2 patch 1= "<<patch_params[0].R1t2[0]<<":"<<patch_params[0].R1t2[1]<<":"<<patch_params[0].R1t2[2]<<",  deltat= "<<global_params.deltat_s<<":"<<global_params.deltat_e<<":"<<global_params.deltat_step<< endl;
+    std::cout << "R1t2 patch 1= "<<patch_params[0].R1t2[0]<<":"<<patch_params[0].R1t2[1]<<":"<<patch_params[0].R1t2[2]<< ", R1t2 patch 2= "<<patch_params[1].R1t2[0]<<":"<<patch_params[1].R1t2[1]<<":"<<patch_params[1].R1t2[2];
+    std::cout <<",  deltat= "<<global_params.deltat_s<<":"<<global_params.deltat_e<<":"<<global_params.deltat_step<< endl;
     std::cout << "p_mobility= "<<global_params.p_mobility<<", p_ShuffleEdge= "<<global_params.p_ShuffleEdge<<",  itr= " <<global_params.itr<<endl;
+    std::cout << std::fixed << std::setprecision(2)<< "MD patch 1= "<<MeanDegree[0]<<", MD patch 2="<<MeanDegree[1]<<endl;
 
     //==================================================================================================
     //  - Map the States to a decimal number Index.
