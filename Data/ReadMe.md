@@ -4,7 +4,7 @@
 
 **Counting of SARS-CoV-2 sequences in U.S. states during the emergence phase**. The file `Alpha_counting_US.csv` reports the daily number of SARS-CoV-2 sequences and the daily number of SARS-CoV-Alpha sequences for each U.S. state for the period included in the logistic fit. For details, see Toranj Simin et al (https://www.medrxiv.org/content/10.1101/2025.11.07.25339691v1). Data were obtained from cov-spectrum (https://cov-spectrum.org/) [2] and provided to cov-spectrum by GISAID (https://gisaid.org/) [3]. We thank the contributors of SARS-CoV-2 sequences collected between Jan and Apr 2021 in U.S. and submitted to GISAID (see https://doi.org/10.55876/gis8.260528xh for the contributors). GISAID-based data are no longer available on cov-spectrum since December 2025. The file contains the minimum information to reproduce the study.
 
-## Reference
+## References
 
 [1] Taube JC, Susswein Z, Colizza V, Bansal S. Characterising non-household contact patterns relevant to respiratory transmission in the USA: analysis of a cross-sectional survey. Lancet Digit Health. 2025;7. doi:10.1016/j.landig.2025.100888 
 
