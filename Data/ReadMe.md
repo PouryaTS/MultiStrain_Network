@@ -7,7 +7,9 @@
 ## Reference
 
 [1] Taube JC, Susswein Z, Colizza V, Bansal S. Characterising non-household contact patterns relevant to respiratory transmission in the USA: analysis of a cross-sectional survey. Lancet Digit Health. 2025;7. doi:10.1016/j.landig.2025.100888 
+
 [2] Chen C, Nadeau S, Yared M, Voinov P, Xie N, Roemer C, et al. CoV-Spectrum: analysis of globally shared SARS-CoV-2 data to identify and characterize new variants. Bioinformatics. 2022;38: 1735–1737. doi:10.1093/bioinformatics/btab856
+
 [3] Elbe S, Buckland-Merrett G. Data, disease and diplomacy: GISAID’s innovative contribution to global health. Glob Chall. 2017;1: 33–46. doi:10.1002/gch2.1018 
 
 
