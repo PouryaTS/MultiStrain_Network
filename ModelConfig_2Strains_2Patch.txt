@@ -1,0 +1,19 @@
+#Global parameters:
+beta1 0.0175
+mu1 0.143
+tau2 1
+tau3 1
+r2 1.75 2.1 0.25
+r3 1
+sigma2 0.0
+sigma3 0 0.1 0.2
+deltat 0 1 3
+p_mobility 0.01
+itr 100
+#Patches parameter:
+Init:
+50 50 0 
+50 50 0 
+R1t2:
+0.1 0.2 0.2
+0 0.11 0.05
