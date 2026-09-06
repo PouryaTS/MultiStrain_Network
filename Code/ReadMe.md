@@ -24,8 +24,20 @@ To run the executable, you need:
 *	A CSV edge list file describing the network,
 *	A label that will be used to name the output files (optional)
 
- On Linux, you can execute the program as follows:
- 
+#### Compilation
+The repository includes the `C++` source code and a Makefile for compiling the model locally. The precompiled `MultiStrainSIRonNet.exe` executable is provided for convenience but may not be compatible with all operating systems or CPU architectures. To compile the program from source, a C++17-compatible compiler such as g++ is required.
+
+On Linux or macOS, from the directory containing the `makefile`, run:
+```code
+make
+```
+This will compile`MultiStrainSIRonNet.cpp` using the compiler and optimization flags specified in the `makefile` and produce the executable `MultiStrainSIRonNet.exe`.
+
+Alternatively, the compilation command can be run directly:
+```code
+g++ -O3 -ffast-math -std=c++17 MultiStrainSIRonNet.cpp -o MultiStrainSIRonNet.exe
+```
+After compilation, the program can be executed as follows:
 ```code
 ./MultiStrainSIRonNet.exe $path_to_configuration_file $path_to_network_edgelist_file $OutputFileLabel
 ```
